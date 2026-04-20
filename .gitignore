@@ -230,3 +230,11 @@ $RECYCLE.BIN/
 backend/data/subtitles/
 
 .DS_Store
+
+
+# =========================
+# React / Node
+# =========================
+node_modules/
+dist/
+.vite/
