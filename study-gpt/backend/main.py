@@ -4,9 +4,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from api import study_router  # ⭐ router import (경로 중요)
+from api import agent_router
+
+
 
 # FastAPI 앱 생성
 app = FastAPI()
+
+#router 연결
+app.include_router(agent_router.router)
 
 #환경변수 로드
 load_dotenv()
