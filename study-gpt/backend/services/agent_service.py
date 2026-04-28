@@ -5,6 +5,7 @@
 
 from services.llm_service import analyze_intent
 from services.curriculum_service import start_study_service
+from services.explain_service import explain_service
 
 
 def run(message: str): #router 에서 이 함수를 호출함. 반드시 필요
@@ -12,12 +13,12 @@ def run(message: str): #router 에서 이 함수를 호출함. 반드시 필요
     print("intent:", intent)
     
     if intent == "study":
-        return start_study_service(message)
+        return start_study_service(message)  #메세지 리턴
     
     #explain 임시 응답
     
     elif intent == "explain":
-        return {"message": "설명 기능 준비중"}
+        return explain_service(message)
     
     
     #quiz 임시 응답

@@ -54,9 +54,12 @@ Study GPT는 학습을 처음 시작하는 초심자를 위해
 ### AI
 - OpenAI API (GPT)
 - (추후 확장) RAG (FAISS)
+- Tavily (고려중)
 
+- 지금은 GPT 서비스로 완성 → 이후 Agent로 확장
 ### Database
-- MariaDB / SQLite (예정)
+- superbase 사용
+
 6️⃣ 프로젝트 구조
 ## 📂 프로젝트 구조
 
@@ -65,7 +68,7 @@ frontend/
 
 
 
-7️⃣ 실행 방법 (이거 중요 ⭐)
+7️⃣ 실행 방법 
 
 ## ▶️ 실행 방법
 
