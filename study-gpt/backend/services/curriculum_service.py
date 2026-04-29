@@ -18,6 +18,7 @@
 
 from services.llm_service import generate_curriculum
 from services.llm_service import analyze_user_input
+from services.explain_service import generate_step_lecture
 
 def start_study_service(message: str):
     
@@ -58,15 +59,27 @@ def start_study_service(message: str):
     # LLM이 다양한 분야의 커리큘럼을 생성
     # 코드는 흐름과 안정성만 관리
 
-    # 6. 결과 반환
+    # 6. 첫 번쨰 커리큘럼 단계 꺼내기
+    first_step = curriculum[0]
     
+    #7. 첫 번쨰 단계 강의 생성
+    first_lecture = generate_step_lecture(
+        category=category,
+        topic=topic,
+        step=first_step,
+        level=level
+        #현재 과목, 전체 주제, 첫 번째 커리큘럼 단계, 난이도를 넘겨서 첫 번째 단계 강의 생성.
+    )
+    
+    #8. 최종 응답
     #최종 응답을 딕셔너리 형태로 반환한다.
-    
     return {
         "category": category,
         "topic": topic,
         "level": level,
-        "curriculum": curriculum
+        "curriculum": curriculum,
+        "current_step": first_step,
+        "lecture": first_lecture
     }
 
     #사용자는 API 응답으로 아래처럼 받는다.
