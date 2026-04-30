@@ -10,7 +10,7 @@ load_dotenv()
 
 llm = ChatOpenAI(
     model="gpt-4o-mini",
-    temperature=0.5
+    temperature=0.7
     )
 
 # 1. 커리큘럼 생성 함수 , 문장형 커리큘럼 리스트 반환 , 커리큘럼의 품질 담당
@@ -266,7 +266,7 @@ def analyze_intent(message: str):
 
         ----------------------------------------
 
-        [핵심 판단 기준 ⭐]
+        [핵심 판단 기준 ]
 
         다음 기준을 반드시 따르라:
 
@@ -284,7 +284,7 @@ def analyze_intent(message: str):
         - 커리큘럼
         - 과정
 
-        👉 이 경우,
+         이 경우,
         "설명해줘"가 함께 있어도 study로 판단하라
 
         ----------------------------------------
