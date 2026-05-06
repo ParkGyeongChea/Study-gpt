@@ -175,7 +175,7 @@ def generate_step_lecture(category: str, topic: str, step: str, level: str):
             [강의 정보]
             - 과목: {category}
             - 전체 주제: {topic}
-            - 현재 학습 단계: {step}
+            - 현재 학습 단계: {step["title"]}
             - 학습 수준: {level}
 
             ----------------------------------------
@@ -183,7 +183,7 @@ def generate_step_lecture(category: str, topic: str, step: str, level: str):
             [목표]
 
             사용자는 "{topic}"을 배우는 중이며,
-            현재 "{step}" 단계의 강의를 듣고 있다.
+            현재 "{step["title"]}" 단계의 강의를 듣고 있다.
 
             이 단계에 대해 "강의처럼" 설명하라.
 
@@ -241,7 +241,7 @@ def generate_step_lecture(category: str, topic: str, step: str, level: str):
 
             [중요]
 
-            - 반드시 "{step}" 중심으로 설명하라
+            - 반드시 "{step["title"]}" 중심으로 설명하라
             - 다른 단계 내용은 최소화하라
             
             ----------------------------------------

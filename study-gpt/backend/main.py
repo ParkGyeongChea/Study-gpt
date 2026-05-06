@@ -27,7 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ⭐ router 연결 (핵심)
+# router 연결 (핵심)
 # 라우터 : 사용자의 요청을 받아서 어떤 기능으로 보낼지 결정하는 입구
 app.include_router(study_router.router)
 

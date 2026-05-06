@@ -1,3 +1,9 @@
+
+#python -m backend.services.curriculum_service
+#실행환경경로 Desktop\AI Agent\workAI\final project\study-gpt>
+#프로젝트 전체 구조 실행 코드. 
+
+
 🔥 1. 서비스 핵심 개념
 "AI가 커리큘럼 기반으로 강의를 진행하고,
 사용자는 대화를 통해 학습을 이어가는 시스템"

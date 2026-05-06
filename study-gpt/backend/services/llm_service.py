@@ -1,5 +1,7 @@
-#llm_service.py
-#GPT 호출
+# llm_service.py
+# GPT 호출
+# GPT에게 커리큘럼 생성 요청
+
 import json
 from langchain_openai import ChatOpenAI
 # from langchain_core.prompts import ChatPromptTemplate #대화
