@@ -20,6 +20,7 @@
 from services.llm_service import generate_curriculum
 from services.llm_service import analyze_user_input
 from services.explain_service import generate_step_lecture
+from services.session_service import save_study_session
 
 
 # 1. 사용자의 학습 요청을 처리하는 함수.
@@ -79,26 +80,44 @@ def start_study_service(message: str):
     # LLM이 다양한 분야의 커리큘럼을 생성
     # 코드는 흐름과 안정성만 관리
 
-    # 6.커리큘럼 단계 꺼내기
+
+    # 7.학습 상태 저장 기능 
+    current_step_index = 0 # 현재 단계 번호(index)를 저장. 사용자가 배우고 있는 커리큘럼을 뜻함 
     
-    current_step_index = 0 # 현재 단계 번호(index)를 저장. 사용자가 배우고 있는 커리큘럼을 뜻함
     
+    # 현재 사용자가 학습 중인 step 데이터
     current_step = curriculum[current_step_index]
     #커리큘럼 리스트에서 , current_step_index 위치의 데이터를 꺼냄
     #first_step = curriculum[0] 에서 변경 (무조건 첫 번째 단계만 가져옴)
     #이제 고정된 단계가 아닌, 변경 가능한 현재 단계로 새로 설정
     
-    #7. 첫 번쨰 단계 강의 생성
+    
+    # 8. 현재 학습 상태 저장
+    # 현재 사용자의 학습 진행 정보를 저장
+    # 이후 진행률 관리, 다음 단계 이동 등에 활용 가능
+    save_study_session(
+        
+        category=category,
+        topic=topic,
+        level=level,
+        curriculum=curriculum,
+        current_step_index=current_step_index,
+        current_step=current_step
+    )
+        
+    
+    #9.첫 번쨰 단계 강의 생성 
     first_lecture = generate_step_lecture(
         category=category,
         topic=topic,
         step=current_step,
         level=level
-        #현재 과목, 전체 주제, 첫 번째 커리큘럼 단계, 난이도를 넘겨서 첫 번째 단계 강의 생성.
+        # 현재 과목, 전체 주제, 첫 번째 커리큘럼 단계, 난이도를 넘겨서 첫 번째 단계 강의 생성.
+        # 현재 step를 기반으로, 실제 강의를 생성하는 기능
     )
     
       
-    #8. 최종 응답
+    #9. 최종 응답
     #최종 응답을 딕셔너리 형태로 반환한다.
     return {
         "category": category,

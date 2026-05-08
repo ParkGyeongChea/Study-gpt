@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from api import study_router  # ⭐ router import (경로 중요)
+from api import study_router  #  router import (경로 중요)
 from api import agent_router
 
 
