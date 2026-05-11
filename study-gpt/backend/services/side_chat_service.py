@@ -30,6 +30,7 @@ def generate_side_chat(message: str):
         - 어려운 용어 최소화
         - 필요하면 간단한 예시 포함
         - 너무 길게 설명하지 마라
+        - 반드시 존댓말로 답변하라
     """
         
     response = llm.invoke(prompt)

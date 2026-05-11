@@ -16,7 +16,11 @@ def run_agent(request: StudyRequest):
     # → request는 dict가 아니라 Pydantic 객체이므로 request.message 형태로 접근 가능
     # request.message = 사용자가 보낸 데이터 중에서 "message" 값만 꺼냄
     
-    return agent_service.run(request.message)
+    return agent_service.run(
+        message=request.message,
+        study_mode=request.study_mode #사용자가 입력한 학습 요청 전달
+        )
+        
     # request에서 message 값을 꺼내서 agent_service의 run 함수에 전달
     # → 실제 AI 처리(LLM 호출 등)는 service에서 수행됨
     # → 실행 결과를 그대로 클라이언트에게 응답으로 반환

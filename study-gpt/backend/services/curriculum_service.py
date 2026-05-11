@@ -21,11 +21,12 @@ from services.llm_service import generate_curriculum
 from services.llm_service import analyze_user_input
 from services.explain_service import generate_step_lecture
 from services.session_service import save_study_session
+from services.quiz_service import generate_quiz
 
 
 # 1. 사용자의 학습 요청을 처리하는 함수.
 # agent_service.py에서 intent가 "study"로 판단되면 이 함수가 실행된다.
-def start_study_service(message: str):
+def start_study_service(message: str, study_mode: str = "free"):
     
     
     # 1. 전처리
@@ -102,7 +103,8 @@ def start_study_service(message: str):
         level=level,
         curriculum=curriculum,
         current_step_index=current_step_index,
-        current_step=current_step
+        current_step=current_step,
+        study_mode=study_mode
     )
         
     
@@ -116,6 +118,18 @@ def start_study_service(message: str):
         # 현재 step를 기반으로, 실제 강의를 생성하는 기능
     )
     
+    #========= light_quiz 모드 퀴즈 생성 =============
+
+    quiz = None
+    # 기본값은 None
+    # free 모드에서는 퀴즈를 생성하지 않음
+
+    if study_mode == "light_quiz":
+        # 현재 학습 모드가 light_quiz인지 검사
+
+        quiz = generate_quiz()
+        # 현재 step 기준으로 퀴즈 생성
+        
       
     #9. 최종 응답
     #최종 응답을 딕셔너리 형태로 반환한다.
@@ -125,7 +139,8 @@ def start_study_service(message: str):
         "level": level,
         "curriculum": curriculum,
         "current_step": current_step,
-        "lecture": first_lecture
+        "lecture": first_lecture,
+        "quiz":quiz
     }
 
     #사용자는 API 응답으로 아래처럼 받는다.

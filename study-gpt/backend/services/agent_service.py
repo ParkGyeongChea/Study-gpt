@@ -5,46 +5,33 @@
 #사용자 입력을 가장 먼저 판단하는 곳
 
 from services.llm_service import analyze_intent
-
-# llm_service.py 의 사용자 의도(Intent) 분석 함수 import
-# 사용자의 입력이 study / explain / quiz / chat 중 무엇인지 판별하는 함수
-
 from services.curriculum_service import (
-    
-    start_study_service,# curriculum_service.py 의 학습 시작 처리 함수
-                        # 사용자 입력 분석 → 커리큘럼 생성 → 첫 step 강의 생성까지 담당
-                        
-    get_next_step,# curriculum_service.py 의 다음 학습 단계 반환 함수
-                  # 현재 step index 기준으로 다음 step 객체를 반환
-    
+    start_study_service,                      
+    get_next_step,   
 )
 
 from services.explain_service import (
-    
-    explain_service,# explain_service.py 의 일반 설명 생성 함수
-                    # 사용자의 단일 질문(explain intent)에 대한 설명 생성
-                    
-    generate_step_lecture # explain_service.py 의 커리큘럼 단계 강의 생성 함수
-                          # 현재 step 정보를 기반으로 GPT 강의 생성
-
+    explain_service,
+    generate_step_lecture
+                          
 )
-
+from services.quiz_service import generate_quiz
 from services.session_service import (
-    
-    get_study_session, # 현재 저장된 학습 상태 가져오기
-    
-    update_step_index # 현재 학습 단계 index 업데이트
-    
+    get_study_session,  
+    update_step_index, 
+    update_current_step 
 )
 
-
-def run(message: str): #router 에서 이 함수를 호출함. 반드시 필요
+def run(message: str, study_mode: str = None): #router 에서 이 함수를 호출함. 반드시 필요
+    
+    #사용자 메시지를 받아 intent 분석 후, 기능을 분기하는 역할을 하는 run 함수가 message와 study_mode를 같이 받는 구조.
     
     # =========================
     # 다음 단계 요청 처리
     # =========================
     
-    if "다음" in message: #현재는 임시로 if문 사용. 추후에는 LLM에게 맡기는 방식 사용 -> LangChain / Agent 방식
+    if message.strip() in ["다음", "다음 단계", "계속"]: #임시 제어 코드
+        #현재는 임시로 if문 사용. 추후에는 LLM에게 맡기는 방식 사용 -> LangChain / Agent 방식
         
         # ===== 현재 저장된 학습 상태 가져오기 =====
         session = get_study_session()
@@ -96,6 +83,8 @@ def run(message: str): #router 에서 이 함수를 호출함. 반드시 필요
         # 1단계->2단계->3단계
         #이 코드가 있어야, 다음 단계 이동, 이어하기, progress, 현재 위치 기억 전부 가능함
         
+        update_current_step(next_step)
+        
         
         #==========progress(학습 진행도) 기능========
         
@@ -121,10 +110,24 @@ def run(message: str): #router 에서 이 함수를 호출함. 반드시 필요
             # 현재 next_step 기준으로, gpt 강의 생성
         )
         
+        
+        #========= light_quiz 모드 퀴즈 생성 =============
+        quiz = None
+        # 기본값은 None
+        # free 모드에서는 퀴즈가 없으므로 기본적으로 비워둠
+        
+        if session["study_mode"] == "light_quiz":
+            # 현재 학습 모드가 light_quiz인지 검사
+            
+            quiz = generate_quiz()
+            # 현재 step 기준으로 퀴즈 생성
+            # generate_quiz() 함수는 session 안의 current_step 정보를 사용함
+        
         #최종 반환
         return {
             "current_step": next_step,
             "lecture": lecture,
+            "quiz":quiz,
             "progress": {
                 "current": current_step_number, #현재 단계 번호
                 "total": total_steps, #전체 단계 수
@@ -171,11 +174,29 @@ def run(message: str): #router 에서 이 함수를 호출함. 반드시 필요
             level=session["level"]
         )
         
+        #==========progress(학습 진행도) 기능========
+
+        total_steps = len(curriculum)
+        # 전체 커리큘럼 단계 수 계산
+
+        current_step_number = current_step_index + 1
+        # 현재 단계 번호 계산
+        # index는 0부터 시작하므로 +1
+
+        progress_percent = int((current_step_number / total_steps) * 100)
+        # 진행률 퍼센트 계산
+                
         #반환
         return {
-            "current_step": current_step,
-            "lecture": lecture
+             "current_step": current_step,
+             "lecture": lecture,
+             "progress": {
+                 "current": current_step_number,
+                 "total": total_steps,
+                 "percent": progress_percent
+             }
         }
+        
         
 
     # =========================
@@ -187,11 +208,45 @@ def run(message: str): #router 에서 이 함수를 호출함. 반드시 필요
     
     print("intent:", intent)
     
-    # study 요청 
+    # =========================
+    # study 요청
+    # =========================
+
     if intent == "study":
-        return start_study_service(message)
-        #메세지 리턴
-    
+
+        if study_mode is None:
+
+            return {
+                "type": "mode_select",
+                "message": "어떤 학습 모드로 진행할까요?",
+                "modes": [
+                    {
+                        "id": "free",
+                        "title": "자유 학습 모드",
+                        "description": "퀴즈 없이 강의 중심으로 학습합니다."
+                    },
+                    {
+                        "id": "light_quiz",
+                        "title": "가벼운 확인 모드",
+                        "description": "각 챕터가 끝난 뒤 간단한 문제를 제공합니다."
+                    },
+                    {
+                        "id": "strict_quiz",
+                        "title": "집중 학습 모드",
+                        "description": "문제를 통과해야 다음 단계로 진행 가능합니다."
+                    }
+                ]
+            }
+
+        # =========================
+        # study_mode 저장
+        # =========================
+
+        
+        
+
+        return start_study_service(message, study_mode)
+        
     # explain 요청
     elif intent == "explain":
         return explain_service(message)

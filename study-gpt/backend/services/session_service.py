@@ -18,19 +18,22 @@ def save_study_session(
     level,
     curriculum,
     current_step_index,
-    current_step
+    current_step,
+    study_mode
 ):
     
     global study_session
     #글로벌 함수. 함수 안에서도 바깥 변수 수정할수 있도록 함
 
     study_session = {
-        "cotegory": category,
+        "category": category,
         "topic": topic,
         "level": level,
         "curriculum": curriculum,
         "current_step_index": current_step_index,
-        "current_step": current_step
+        "current_step": current_step,
+        "study_mode": study_mode,
+        # "quiz_passed": False
     }
     
 #======== 현재 학습 상태 반환 함수==============
@@ -44,3 +47,14 @@ def update_step_index(new_index):
     global study_session
 
     study_session["current_step_index"] = new_index
+    
+# 학습 모드 저장 함수
+def update_study_mode(mode):
+    study_session["study_mode"] = mode
+    
+    
+def update_current_step(step):
+
+    global study_session
+
+    study_session["current_step"] = step
