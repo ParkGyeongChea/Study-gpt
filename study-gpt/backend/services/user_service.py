@@ -81,3 +81,14 @@ def authenticate_user(
     #authenticate_user() 역할은
     #이 유저가 진짜 로그인 가능한지 판단하는 함수.
     
+# 4.id로 유저 찾는 함수
+def get_user_by_id(db: Session, user_id: int):
+    #id기준으로 유저 조회 함수 생성 (db:session = DB연결객체 받기, user_id: int: = 조회할 사용자 번호 받기)
+    
+    return db.query(User).filter(
+        User.id == user_id
+    ).first()
+    
+    #db.query(User) = users 테이블 조회 시작
+    #filter(User.id == user_id) = id가 같은 사용자 찾기
+    #.first() = 첫 번쨰 결과 하나만 반환

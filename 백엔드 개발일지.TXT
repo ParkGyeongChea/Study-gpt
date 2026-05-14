@@ -175,13 +175,27 @@ Supabase 프로젝트 생성, 기본 db연결 파일 생성
 비밀번호 bcrypt 암호화 설정
 
 ======================================
-이제 앞으로 붙일 것들:
+5.14
 
+JWT 인증 시스템 완료
 
+( bcrypt 비밀번호 암호화
+로그인 검증
+JWT access_token 생성
+JWT decode
+OAuth2PasswordBearer 적용
+OAuth2PasswordRequestForm 적용
+/me 보호 라우터 테스트 성공
+Swagger Authorize 연동 성공)
 
-JWT 인증
-현재 로그인 유저
-progress 저장
+StudySession DB 테이블(사용자 공부 상태 저장소) 설계 작업 진행중
+
+current_user 구조 연결
+StudySession 저장 서비스 생성
+JWT → AI 시스템 연결 작업 시작
+
+=======================================
+사용자 학습 상태 db저장(서버 꺼지면 진행도 step,커리큘럼 사라짐)
 curriculum 상태 저장
 side chat memory 저장
 

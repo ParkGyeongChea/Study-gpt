@@ -10,7 +10,7 @@ from api import side_chat_router
 #DB 관련 import
 from db.database import engine, Base #만들어둔 DB 연결(engine) , SQLAQLAlchemy 부모(Base) 가져옴
 from models.user import User # SQLAlchemy는 import된 모델만 인식. 하지 않으면 User테이블 존재 자체를 모름
-
+from models.study_session import StudySession
 from api.user_router import router as user_router
 #as user_router =  충돌 방지를 위해 api.user_router 안의 router를 user_router 라는 이름으로 사용
 

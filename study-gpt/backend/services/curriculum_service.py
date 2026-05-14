@@ -22,7 +22,7 @@ from services.llm_service import analyze_user_input
 from services.explain_service import generate_step_lecture
 from services.session_service import save_study_session
 from services.quiz_service import generate_quiz
-
+# from services.study_session_service import create_study_session
 
 # 1. 사용자의 학습 요청을 처리하는 함수.
 # agent_service.py에서 intent가 "study"로 판단되면 이 함수가 실행된다.

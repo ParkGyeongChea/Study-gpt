@@ -19,7 +19,16 @@ from db.database import get_db
 from schemas.user_schema import UserCreate, UserLogin
 from services.user_service import create_user,authenticate_user
 
+from core.security import create_access_token
+# core/security.py 파일
+# (비밀번호 암호화 + JWT 생성 같은 보안 기능 담당 파일)의
+# JWT access_token 생성 역할을 하는
+# create_access_token 함수 불러오기
 
+from core.dependencies import get_current_user
+
+from fastapi.security import OAuth2PasswordRequestForm
+#FastAPI 공식 로그인 Form 처리
 
 #===============
 
@@ -51,7 +60,11 @@ def signup( #회원가입 요청을 받아서 DB저장 함수 실행 준비
 
 #로그인 API함수
 def login(
-    user_data: UserLogin, #로그인 요청 데이터
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    #form_data = 로그인 form 데이터 저장 변수
+    #OAuth2PasswordRequestForm = FastAPI 공식 OAuth2 로그인 form 처리 기능
+    #Depends() = fastapi가 form 데이터를 자동으로 넣어주는 기능
+    
     db: Session = Depends(get_db) 
     #get_db() 실행해서, db연결(session) 자동으로 넣음.
     # Depends = 자동으로 준비해라 , 필요한 기능 자동 주입.
@@ -59,8 +72,8 @@ def login(
     #로그인 가능한 유저인지 검사
     user = authenticate_user(  #authenticate_user = 이메일로 유저 조회, 존재 확인, bcrypt 비밀번호 비교, 성공시 유저 반환 역할
         db, #현재 연결 db전달
-        user_data.email, #로그인 요청 email 값
-        user_data.password # 요청 비밀번호 값
+        form_data.username, #Swagger username 입력칸 값 현재는 email 역할로 사용
+        form_data.password # 비밀번호 역할로 사용
         
         #user = 로그인 성공한 유저 결과 저장. 로그인 성공 시, 안에 user 객체 들어감 실패 시 None
     )
@@ -69,8 +82,31 @@ def login(
     if not user:
         return {"message": "이메일 또는 비밀번호가 올바르지 않습니다."} 
           
-    #로그인 성공 시 메시지 반환
+    # 로그인 성공 시, 로그인한 사용자의 id를 이용해서 JWT access_token 생성
+    access_token = create_access_token(user.id)
+
+    # 생성된 JWT 토큰을 사용자에게 반환
     return {
-        "message": "로그인 성공",
+        "access_token": access_token, #생성된 JWT 토큰 반환
+        "token_type": "bearer", #이 토큰이 Bearer 방식 JWT 라는 의미
         "email": user.email
     }
+
+
+#테스트용 보호 API 생성 , /me = JWT 인증 테스트 API
+@router.get("/me")
+
+# 3. 현재 로그인 사용자 정보 반환 api 함수 생성
+def get_me(
+    current_user = Depends(get_current_user) 
+    #current_user = 현재 로그인 사용자 저장 변수 
+    #Depends(get_current_user) =  API 실행 전에 먼저 get_current_user() 실행해라
+):
+    
+    return {
+    "email": current_user.email
+}
+# /me 요청 들어오면
+# → 먼저 JWT 검사
+# → 현재 로그인 사용자 찾기
+# → 성공하면 email 반환
