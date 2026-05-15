@@ -20,27 +20,47 @@
 from services.llm_service import generate_curriculum
 from services.llm_service import analyze_user_input
 from services.explain_service import generate_step_lecture
-from services.session_service import save_study_session
+from services.session_service import save_study_session, get_study_session
 from services.quiz_service import generate_quiz
 # from services.study_session_service import create_study_session
 
 # 1. 사용자의 학습 요청을 처리하는 함수.
 # agent_service.py에서 intent가 "study"로 판단되면 이 함수가 실행된다.
-def start_study_service(message: str, study_mode: str = "free"):
+def start_study_service(
+    db,
+    user_id: int,
+    message: str,
+    study_mode: str = "free"
+):
+    #=============================================================
     
+    # 1.기존 학습 상태 존재 여부 검사(현재 로그인 사용자의 기존 학습 상태를 StudySession 테이블에서 조회)
+    session = get_study_session(db,user_id)
     
-    # 1. 전처리
+    if session is not None:
+        # 기존 학습 이어하기 처리, DB에 기존 학습 상태가 존재하는 경우
+        return {
+            "message": "이전에 진행하던 학습을 이어서 진행합니다!",
+            "category": session.category,
+            "topic": session.topic,
+            "level": session.level,
+            "curriculum": session.curriculum,
+            "current_step": session.current_step,
+            "progress": session.progress
+        }
+    
+    # 2. 전처리
     message = message.lower().strip()
     # 사용자 입력 정의
     #lower() 소문자 변환
 
-    # 2. 사용자 입력 분석
+    # 3. 사용자 입력 분석
     category, level, topic = analyze_user_input(message)
     # 문장을 분석해서, llm_service 의 analyze_user_input 함수를 이용해 문장을 나눈다.
     # category = "파이썬" level = "초급" topic = "파이썬 기초 전체"
         
 
-    # 3. 단계 수 결정
+    # 4. 단계 수 결정
     if level == "초급":
         step_count = 5
     elif level == "중급":
@@ -49,21 +69,21 @@ def start_study_service(message: str, study_mode: str = "free"):
         step_count = 7
 
 
-    # 4. 디버깅용 출력
+    # 5. 디버깅용 출력
     print("DEBUG message:", message)
     print("DEBUG category:", category)
     print("DEBUG topic:", topic)
     print("DEBUG level:", level)
     print("DEBUG step_count:", step_count)
 
-    # 5. LLM 기반 커리큘럼 생성
+    # 6. LLM 기반 커리큘럼 생성
     
     curriculum = generate_curriculum(category, topic, level, step_count)
     # GPT가 생성한 커리큘럼 문자열 리스트 반환
 
 
 
-    # 6. 커리큘럼을 step 객체 구조로 변환
+    # 7. 커리큘럼을 step 객체 구조로 변환
     
     curriculum = parse_curriculum(curriculum)
     # 기존 문자열 리스트 형태의 curriculum 데이터를
@@ -82,7 +102,7 @@ def start_study_service(message: str, study_mode: str = "free"):
     # 코드는 흐름과 안정성만 관리
 
 
-    # 7.학습 상태 저장 기능 
+    # 8.학습 상태 저장 기능 
     current_step_index = 0 # 현재 단계 번호(index)를 저장. 사용자가 배우고 있는 커리큘럼을 뜻함 
     
     
@@ -93,11 +113,12 @@ def start_study_service(message: str, study_mode: str = "free"):
     #이제 고정된 단계가 아닌, 변경 가능한 현재 단계로 새로 설정
     
     
-    # 8. 현재 학습 상태 저장
+    # 9. 현재 학습 상태 저장
     # 현재 사용자의 학습 진행 정보를 저장
     # 이후 진행률 관리, 다음 단계 이동 등에 활용 가능
     save_study_session(
-        
+        db=db,
+        user_id=user_id,
         category=category,
         topic=topic,
         level=level,
@@ -108,7 +129,7 @@ def start_study_service(message: str, study_mode: str = "free"):
     )
         
     
-    #9.첫 번쨰 단계 강의 생성 
+    # 10.첫 번쨰 단계 강의 생성 
     first_lecture = generate_step_lecture(
         category=category,
         topic=topic,
@@ -127,11 +148,11 @@ def start_study_service(message: str, study_mode: str = "free"):
     if study_mode == "light_quiz":
         # 현재 학습 모드가 light_quiz인지 검사
 
-        quiz = generate_quiz()
+        quiz = generate_quiz(db, user_id)
         # 현재 step 기준으로 퀴즈 생성
         
       
-    #9. 최종 응답
+    # 11. 최종 응답
     #최종 응답을 딕셔너리 형태로 반환한다.
     return {
         "category": category,
