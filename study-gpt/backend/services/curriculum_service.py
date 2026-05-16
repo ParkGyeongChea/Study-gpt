@@ -22,7 +22,16 @@ from services.llm_service import analyze_user_input
 from services.explain_service import generate_step_lecture
 from services.session_service import save_study_session, get_study_session
 from services.quiz_service import generate_quiz
-# from services.study_session_service import create_study_session
+
+
+from services.chat_message_service import get_chat_messages
+
+
+
+
+
+#====================================================
+
 
 # 1. 사용자의 학습 요청을 처리하는 함수.
 # agent_service.py에서 intent가 "study"로 판단되면 이 함수가 실행된다.
@@ -38,6 +47,13 @@ def start_study_service(
     session = get_study_session(db,user_id)
     
     if session is not None:
+        
+        # 이전 채팅 기록 조회
+        chat_history = get_chat_messages(db,user_id)
+        #chat_message_service.py(이전 채팅 조회 역할 파일)의 get_chat_messages 함수 호출
+        #현재 로그인 사용자의 이전 AI 대화 기록 전부 조회 , ChatMessage 전부 가져오기
+        
+        
         # 기존 학습 이어하기 처리, DB에 기존 학습 상태가 존재하는 경우
         return {
             "message": "이전에 진행하던 학습을 이어서 진행합니다!",
@@ -46,7 +62,8 @@ def start_study_service(
             "level": session.level,
             "curriculum": session.curriculum,
             "current_step": session.current_step,
-            "progress": session.progress
+            "progress": session.progress,
+            "chat_history": chat_history #orm 객체 리스트 일 가능성이 있음. 프론트 연결 시 json 직렬화 처리 가능성
         }
     
     # 2. 전처리

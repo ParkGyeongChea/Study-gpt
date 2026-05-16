@@ -14,6 +14,7 @@ from sqlalchemy.orm import declarative_base
 #이 코드는 User, StudySession , CurriculumStep , Progress 같은 모든 DB 테이블들의 공통 부모 클래스를 만드는 코드.
 #declarative_base() = DB테이블들의 부모 클래스 생성
 
+
 from dotenv import load_dotenv
 import os
 
@@ -49,6 +50,10 @@ Base = declarative_base()
 # Python은 원래 이 클래스가 일반 클래스인지 DB 테이블용 클래스인지 모른다.
 # 그래서 SQLAlchemy에게 알려줘야 한다
 # "이 클래스는 DB 테이블용이다". 그 역할을 하는게 Base
+
+
+#현재 모델들을 읽어서,Supabase DB에 실제 테이블 생성
+Base.metadata.create_all(bind=engine)
 
 
 #FastAPI 요청마다 DB작업 공간(Session)을 생성하고 관리하는 함수 생성

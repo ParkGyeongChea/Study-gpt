@@ -15,12 +15,12 @@ from services.chat_message_service import save_chat_message
 #===================================================================
 
 # 1. 사용자 입력을 가장 먼저 받아서, 무슨 기능을 실행할지 판단하는 중앙 제어 함수.
-def run(db, user_id: int, message: str, study_mode: str = None):
+def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
     # 사용자 입력을 받아 intent 분석 후 기능을 분기하고,
     # 현재 로그인 사용자(user_id)와 DB 연결(db)을 함께 전달하는 AI 기능 중앙 제어 함수
     
     #현재 로그인 사용자의 메시지를 chat_message테이블에  저장
-    save_chat_message(db,user_id,"user",message)
+    save_chat_message(db,user_id,room_id,"user",message)
     
     
     # =========================
@@ -136,7 +136,7 @@ def run(db, user_id: int, message: str, study_mode: str = None):
         # DB에서 가져온 category/topic/level과 다음 step을 이용해서 GPT 강의를 생성한다.
 
         #AI 강의 응답을 chat_message 테이블에 저장
-        save_chat_message(db,user_id,"assistant",lecture)
+        save_chat_message(db,user_id,room_id,"assistant",lecture["content"])
     
     
         #========= light_quiz 모드 퀴즈 생성 =============
@@ -212,7 +212,7 @@ def run(db, user_id: int, message: str, study_mode: str = None):
 
 
         #AI 강의 응답을 chat_message 테이블에 저장
-        save_chat_message(db,user_id,"assistant",lecture)
+        save_chat_message(db,user_id,room_id,"assistant",lecture["content"])
 
         #========== progress(학습 진행도) 기능 ========
 
@@ -285,7 +285,7 @@ def run(db, user_id: int, message: str, study_mode: str = None):
         # 학습 시작 처리
         # =========================
 
-        return start_study_service(
+        study_result = start_study_service(
             db=db,
             # 현재 DB 연결 전달
 
@@ -302,6 +302,21 @@ def run(db, user_id: int, message: str, study_mode: str = None):
         # start_study_service 함수 호출
         # category/topic/level 분석, 커리큘럼 생성, 첫 강의 생성,
         # 그리고 StudySession DB 저장까지 이어진다.
+        
+        #=======================
+        # user 메시지 저장
+        #=======================
+        
+        if "lecture" in study_result: #의미 = lecture 가 있을 때만 AI강의 내용을 저장, lecture가 없으면 저장하지 않고 그냥 반환
+            save_chat_message( #lecture = ai가 생성한 강의 내용
+                db,
+                user_id,
+                room_id,
+                "assistant",
+                study_result["lecture"]["content"]
+            ) 
+        
+        return study_result
 
     # explain 요청
     elif intent == "explain":

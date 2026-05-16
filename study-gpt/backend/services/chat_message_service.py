@@ -15,6 +15,7 @@ from sqlalchemy import asc
 def save_chat_message(
     db: Session,
     user_id: int,
+    room_id: int,
     role: str,
     content: str
 ):
@@ -34,8 +35,9 @@ def save_chat_message(
     #chatmessage 객체 생성 (새 메시지 ORM 객체 생성)
     message = ChatMessage(
         session_id=session.id, #어느 학습 세션의 메시지인지 연결
-        rele=role, #메시지 작성자 역할
-        contetn=content #실제 메시지 내용 저장
+        room_id=room_id, #어느 채팅방(room)인지 
+        role=role, #메시지 작성자 역할
+        content=content #실제 메시지 내용 저장
         )
     
     #저장 후 새로고침, 반환
@@ -45,18 +47,11 @@ def save_chat_message(
     
     return message
 
-# 2. 현재 로그인 사용자의 이전 대화 기록 전부 조회
-def get_chat_messages(db: Session,user_id: int):
-    
-    #현재 로그인 사용자의 studySession 조회
-    session = get_study_session(db, user_id) #현재 로그인 사용자의 session.id를 알아야 하기 때문.
-    
-    #세션 존재 여부 건사
-    if session is None:
-        return [] # [] = 아직 저장된 대화 없으니
+# 2. 현재 로그인 사용자의 채팅방별 이전 대화 기록 전부 조회
+def get_chat_messages(db: Session,room_id: int):
     
     #ChatMessage 조회
-    messages = db.query(ChatMessage).filter(ChatMessage.session_id == session.id).order_by(asc(ChatMessage.id)).all()
+    messages = db.query(ChatMessage).filter(ChatMessage.room_id == room_id).order_by(asc(ChatMessage.id)).all()
     #db.query(ChatMessage) =ChatMessage 테이블 조회 시작
     #.filter() = 현재 session_id 메시지만 조회 , 다른 사용자 대화 제외
     #.order_by(asc(ChatMessage.id)).all() = 오래된 메시지부터 정렬 후, 조회 결과 전부 리스트로 반환(.all)

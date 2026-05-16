@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from api import study_router  #  router import (경로 중요)
 from api import agent_router
 from api import side_chat_router
+from api import study_room_router
 
 #DB 관련 import
 from db.database import engine, Base #만들어둔 DB 연결(engine) , SQLAQLAlchemy 부모(Base) 가져옴
@@ -14,6 +15,8 @@ from models.study_session import StudySession
 from api.user_router import router as user_router
 #as user_router =  충돌 방지를 위해 api.user_router 안의 router를 user_router 라는 이름으로 사용
 
+from models.study_room import StudyRoom
+#studyroom 클래스 메모리에 등록시키기 위해 사용.비활성화 처럼 보여도 정상 등록 목적 import다
 
 
 # FastAPI 앱 생성
@@ -32,8 +35,8 @@ Base.metadata.create_all(bind=engine)
 app.include_router(agent_router.router)
 app.include_router(side_chat_router.router)
 app.include_router(study_router.router)
-
 app.include_router(user_router) #회원가입 api를 FastAPI 서버에 등록
+app.include_router(study_room_router.router)
 
 #환경변수 로드
 load_dotenv()

@@ -35,6 +35,7 @@ def run_agent(
     return agent_service.run(
         db=db, #현재 db연결 전달
         user_id=current_user.id, #jwt 인증으로 확인된 현재 로그인 사용자 id전달
+        room_id=request.room_id,
         message=request.message, #사용자 입력 메시지 전달
         study_mode=request.study_mode #현재 학습 모드 전달
         )
