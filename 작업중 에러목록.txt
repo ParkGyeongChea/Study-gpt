@@ -1,0 +1,19 @@
+1. 5.18 프론트 작업중 http/https 에러 발생
+
+ 리액트에서 https 방식으로 백엔드에 접근하려고 했는데, fastapi 서버는 http 방식으로 실행중이었음.
+Invalid HTTP request received 에러 발생
+
+frontend/api/api.js 파일의 https://127.0.0.1:8000 ->http://127.0.0.1:8000 로 변경
+https는 보안 ssl연결 시도 http는 일반 서버
+
+현재 로컬 개발 환경에서는 절대 https 쓰면 안됨
+
+===========
+
+2.401 에러 발생 
+
+백엔드는 로그인 사용자만 접근 가능하게 만들어짐. (Depends(get_current_user))
+
+그런데 리액트는  Authorization: Bearer 토큰 을 보내지 않고 있다. 백엔드는 누군지 모르지 접속 차단한것. 401 에러 발생
+
+f12 console 창에 직접 토큰 넣어서 테스트 가능하게 임시로 설정.
