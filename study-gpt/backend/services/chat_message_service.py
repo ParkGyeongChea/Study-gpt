@@ -3,15 +3,17 @@
 # 실제 사용자와 AI의 대화 내용을
 # DB에 저장하는 서비스 파일
 
-from models.chat_message import ChatMessage
 from services.session_service import get_study_session
 from sqlalchemy.orm import Session
+from datetime import datetime
 from sqlalchemy import asc
+from models.chat_message import ChatMessage
+from models.study_room import StudyRoom
 
 #=================
 
 
-# 1. 메시지 저장 함수
+# 1. 실제 메시지 저장 담당 함수 생성
 def save_chat_message(
     db: Session,
     user_id: int,
@@ -27,14 +29,13 @@ def save_chat_message(
     # session_service.py 파일(DB 학습 상태 조회 역할)의 get_study_session 함수 호출
     # 현재 로그인 사용자의 # StudySession 데이터를 조회
     
-    #학습 세션 없으면 저장 불가
-    if session is None:
-        return None
-    
-    
+
     #chatmessage 객체 생성 (새 메시지 ORM 객체 생성)
     message = ChatMessage(
-        session_id=session.id, #어느 학습 세션의 메시지인지 연결
+        session_id=session.id if session else None, 
+        #삼항연산, 조건이 True 면 A False 면 B
+        #session_id 이 존재하면 session.id 사용하고, 없으면 none 사용
+        
         room_id=room_id, #어느 채팅방(room)인지 
         role=role, #메시지 작성자 역할
         content=content #실제 메시지 내용 저장
@@ -42,6 +43,16 @@ def save_chat_message(
     
     #저장 후 새로고침, 반환
     db.add(message)
+    
+    #현재 room 조회
+    room = db.query(StudyRoom).filter(
+        StudyRoom.id == room_id
+    ).first()
+    
+    #room 존재 시 updated_at 갱신
+    if room:
+        room.updated_at = datetime.utcnow() #현재 시간으로 마지막 수정 시간 변경
+        
     db.commit()
     db.refresh(message)
     

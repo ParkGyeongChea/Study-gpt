@@ -13,19 +13,17 @@ const api = axios.create({
     baseURL:"http://127.0.0.1:8000", //baseURL 설정
 
     headers: { //headers 설정 (JSON 형식으로 데이터 보낸다고 서버에 알림)
-        "Content-Type": "applucation/json", 
+        "Content-Type": "application/json",
     },
 });
 
 
 // 2. 요청 보내기 전에 자동 실행
 api.interceptors.request.use(
-
   (config) => {
 
     // localStorage에 저장된 access_token 가져오기
     const token = localStorage.getItem("access_token");
-
 
     // 토큰 존재하면 Authorization 헤더 추가
     if (token) {
@@ -33,8 +31,6 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
       // backend JWT 인증용 헤더 추가
     }
-
-
     return config;
   }
 

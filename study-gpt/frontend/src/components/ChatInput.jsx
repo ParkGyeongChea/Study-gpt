@@ -1,5 +1,7 @@
 //ChatInput.jsx
-//입력창 + 전송 버튼 담당
+// 입력창 + 메시지 전송 담당 컴포넌트
+
+//=====================================
 
 // React 상태(state) 기능 import
 import { useState } from "react";
@@ -9,102 +11,265 @@ import api from "../api/api";
 
 
 // ChatInput 컴포넌트
-// 부모(ChatPage)에게 selectedRoom 전달받음
-// setRefreshTrigger도 전달받음
 export default function ChatInput({
-  selectedRoom,
-  setRefreshTrigger
-}) {
 
+  selectedRoom,
+  // 현재 선택된 채팅방 객체
+
+  setSelectedRoom,
+  // 현재 선택 room 변경 함수
+
+  setRefreshTrigger,
+  // ChatMessages 다시 조회시키는 상태 변경 함수
+
+  messages,
+  // 현재 채팅 메시지 배열 state
+
+  setMessages,
+  // messages state 변경 함수
+
+  isLoading,
+  // 현재 AI 응답 생성 중인지 여부
+
+  setIsLoading
+  // AI 로딩 상태 변경 함수
+
+}) {
 
   // 입력창 값 저장 state
   const [message, setMessage] = useState("");
-  // message = 현재 입력값 저장
-  // setMessage = 입력값 변경 함수
+
+  // 현재 선택된 학습 모드 저장 state
+  const [selectedMode, setSelectedMode] = useState("free");
 
 
-  // 전송 버튼 클릭 함수
+  //=====================================
+  // 메시지 전송 함수
+  //=====================================
+
   const handleSend = async () => {
 
-    // 빈 문자열이면 전송 중지
+    // 공백 입력 방지
     if (!message.trim()) return;
-    // trim() = 앞뒤 공백 제거
-    // 공백만 입력한 경우 방지
 
 
-    // POST /agent 요청
-    await api.post("/agent", {
+    //=====================================
+    // user 메시지 즉시 화면 출력
+    //=====================================
 
-      room_id: selectedRoom.id,
-      // 현재 선택된 room id 전달
+    const tempMessage = {
 
-      message: message,
-      // 사용자 입력 메시지 전달
+      id: Date.now(),
 
-      study_mode: "free"
-      // 현재는 free 모드 고정
+      role: "user",
 
-    });
+      content: message
+
+    };
 
 
-    // refreshTrigger 변경
-    setRefreshTrigger((prev) => prev + 1);
-    // prev = 이전 값
-    // 이전 값 +1 해서 refreshTrigger 변경
-    // 숫자 바뀌면 ChatMessages 재조회 가능
+    // 기존 메시지 배열 뒤에 추가
+    setMessages((prev) => [...prev, tempMessage]);
+
+
+    // 현재 room 임시 저장
+    let currentRoom = selectedRoom;
+
+
+    //=====================================
+    // room 없는 경우 새 room 생성
+    //=====================================
+
+    if (!currentRoom) {
+
+      const roomResponse = await api.post("/rooms", {
+
+        title: "새 채팅"
+
+      });
+
+      currentRoom = roomResponse.data;
+
+      setSelectedRoom(currentRoom);
+
+    }
+
+
+    //=====================================
+    // AI 로딩 시작
+    //=====================================
+
+    setIsLoading(true);
+
+
+    //=====================================
+    // backend AI 요청
+    //=====================================
+
+    try {
+
+      const response = await api.post("/agent", {
+
+        room_id: currentRoom.id,
+
+        message: message,
+
+        study_mode: selectedMode
+
+      });
+
+
+      // assistant 메시지 생성
+      const assistantMessage = {
+
+        id: Date.now() + 1,
+
+        role: "assistant",
+
+        content: response.data.lecture.content
+
+      };
+
+
+      // assistant 메시지 추가
+      setMessages((prev) => [
+
+        ...prev,
+        assistantMessage
+
+      ]);
+
+
+      // ChatMessages 재조회 trigger
+      setRefreshTrigger((prev) => prev + 1);
+
+    } catch (error) {
+
+      console.log(error.response?.data);
+
+    } finally {
+
+      // AI 로딩 종료
+      setIsLoading(false);
+
+    }
 
 
     // 입력창 초기화
     setMessage("");
+
   };
 
 
+  //=====================================
+  // 화면 출력(UI)
+  //=====================================
+
   return (
 
-    <div className="flex gap-2 mt-4">
-      {/* flex = 가로 배치 */}
-      {/* gap-2 = 요소 사이 간격 */}
-      {/* mt-4 = 위쪽 바깥 여백 */}
+    <div className="mt-6">
+
+      {/* 전체 입력 박스 */}
+      <div className="
+        bg-white
+        dark:bg-zinc-900
+
+        border-[3px]
+
+        border-gray-300
+        dark:border-zinc-700
+
+        rounded-[2rem]
+        p-4
+      ">
+
+        {/* 실제 메시지 입력창 */}
+        <input
+
+          type="text"
+
+          value={message}
+
+          onChange={(e) => setMessage(e.target.value)}
+
+          placeholder="무엇을 배우고 싶나요?"
 
 
-      {/* 메시지 입력창 */}
-      <input
+          // Enter 입력 시 메시지 전송
+          onKeyDown={(e) => {
 
-        type="text"
+            if (e.key === "Enter") {
 
-        value={message}
-        // 입력값 state 연결
+              handleSend();
 
-        onChange={(e) => setMessage(e.target.value)}
-        // 입력 시 message state 변경
+            }
 
-        placeholder="메시지를 입력하세요"
-
-        className="flex-1 border rounded p-3"
-        // flex-1 = 남은 공간 전부 사용
-        // border = 테두리
-        // rounded = 모서리 둥글게
-        // p-3 = 안쪽 여백
-      />
+          }}
 
 
-      {/* 전송 버튼 */}
-      <button
+          className="
+            w-full
+            bg-transparent
+            outline-none
 
-        onClick={handleSend}
-        // 클릭 시 handleSend 실행
+            text-black
+            dark:text-white
 
-        className="bg-blue-500 text-white px-4 rounded"
-      >
-        {/* bg-blue-500 = 파란 배경 */}
-        {/* text-white = 흰 글자 */}
-        {/* px-4 = 좌우 안쪽 여백 */}
-        {/* rounded = 모서리 둥글게 */}
+            text-lg
 
-        전송
+            placeholder:text-gray-500
+            dark:placeholder:text-gray-400
+          "
 
-      </button>
+        />
+
+
+        {/* 아래 옵션 영역 */}
+        <div className="flex justify-end mt-4">
+
+          {/* 학습 모드 선택 dropdown */}
+          <select
+
+            value={selectedMode}
+
+            onChange={(e) => setSelectedMode(e.target.value)}
+
+            className="
+              bg-gray-100
+              dark:bg-zinc-800
+
+              text-black
+              dark:text-white
+
+              border border-gray-300
+              dark:border-zinc-700
+
+              rounded-full
+              px-4 py-2
+              text-sm
+            "
+
+          >
+
+            <option value="free">
+              자유 학습
+            </option>
+
+            <option value="light_quiz">
+              가벼운 확인
+            </option>
+
+            <option value="strict_quiz">
+              집중 학습
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
 
     </div>
+
   );
 }

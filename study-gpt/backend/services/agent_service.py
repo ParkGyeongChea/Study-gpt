@@ -12,12 +12,28 @@ from services.explain_service import (explain_service,generate_step_lecture)
 from services.quiz_service import generate_quiz
 from services.session_service import (get_study_session,update_step_index,update_current_step)
 from services.chat_message_service import save_chat_message
+from services.room_service import (generate_room_title, update_room_title) #채팅방 관련 기능 파일 
+from services.chat_message_service import get_chat_messages #특정 room의 기존 채팅 메시지 목록 조회
+
 #===================================================================
 
 # 1. 사용자 입력을 가장 먼저 받아서, 무슨 기능을 실행할지 판단하는 중앙 제어 함수.
 def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
     # 사용자 입력을 받아 intent 분석 후 기능을 분기하고,
     # 현재 로그인 사용자(user_id)와 DB 연결(db)을 함께 전달하는 AI 기능 중앙 제어 함수
+    
+    #현재 room의 기존 메시지 가져오기 , 이 아래 코드는 제목을 자동 생성하는 코드이기 때문이기떄문에,
+    #메시지가 저장되기 전에 , 첫 메시지라고 판단을 할수 있게끔 함
+    messages = get_chat_messages(db, room_id)
+    
+    #첫 메시지인지 확인 , 메시지 개수가 0개면,
+    if len(messages) == 0:
+        
+        #사용자 첫 메시지 기반 제목 생성 , gpt에게 제목 생성 요청
+        new_title = generate_room_title(message)
+        
+        #실제 DB room 제목 수정
+        update_room_title(db, room_id, new_title)
     
     #현재 로그인 사용자의 메시지를 chat_message테이블에  저장
     save_chat_message(db,user_id,room_id,"user",message)
@@ -304,7 +320,7 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
         # 그리고 StudySession DB 저장까지 이어진다.
         
         #=======================
-        # user 메시지 저장
+        # AI 강의 응답 저장
         #=======================
         
         if "lecture" in study_result: #의미 = lecture 가 있을 때만 AI강의 내용을 저장, lecture가 없으면 저장하지 않고 그냥 반환
@@ -330,6 +346,17 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
 
     # 일반 대화
     else:
-        return {
+        
+        response ={
             "message": "일반 대화 기능 준비중"
         }
+        
+        save_chat_message(
+            db,
+            user_id,
+            room_id,
+            "assistant",
+            response["message"]
+        )
+        
+        return response

@@ -22,9 +22,10 @@ class ChatMessage(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     #session_id 컬럼 생성
-    session_id = Column(Integer,ForeignKey("study_sessions.id")) 
+    session_id = Column(Integer,ForeignKey("study_sessions.id"),nullable=True) 
     # 현재 메시지가 어느 StudySession(학습 세션)의 대화인지 연결
     # study_sessions 테이블의 id와 연결된다.
+    # nullable=True = 이 칸은 비어있어도 저장 허용
     
     
     #role 컬럼 (메시지 작성자 구분)

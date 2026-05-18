@@ -14,7 +14,7 @@ from db.database import Base
 
 #==============================
 
-#.1 StudyRoom 모델 클래스 정의
+#.1 StudyRoom 모델 클래스 정의 , study_rooms 테이블 (채팅방 자체를 저장함)
 
 class StudyRoom(Base):
     
@@ -36,8 +36,10 @@ class StudyRoom(Base):
     #DateTime = 날짜/시간 타입
     #default=datetime.utcnow = 새 채팅방이 만들어질 떄, 현재 시간을 자동으로 넣겠다는 뜻
     
-    #채팅방이 마지막으로 수정된 시간을 저장하는 코드
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    #채팅방이 마지막으로 수정된 시간을 저장하는 코드 , 최신 채팅이 제일 위로 오게
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    #default = 처음 생성될 떄 시간 저장
+    #onupdate = 이 row 수정될 때마다 현재 시간 자동 갱신
     
     #이 채팅방과 사용자를 파이썬 코드에서 연결해주는 코드
     user = relationship("User", back_populates="study_rooms")

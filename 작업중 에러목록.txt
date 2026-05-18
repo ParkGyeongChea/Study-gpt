@@ -17,3 +17,47 @@ https는 보안 ssl연결 시도 http는 일반 서버
 그런데 리액트는  Authorization: Bearer 토큰 을 보내지 않고 있다. 백엔드는 누군지 모르지 접속 차단한것. 401 에러 발생
 
 f12 console 창에 직접 토큰 넣어서 테스트 가능하게 임시로 설정.
+
+==============
+
+3.JWT 에러 발생: Signature has expired.
+
+= 토큰 시간 만료됨 / 재 로그인해서 토큰 재발급
+
+======================
+
+4.422 Unprocessable Entity = 보낸 json 구조가 틀림
+
+= 프론트가 보내는 데이터 형식과 백엔드가 기대하는 데이터 형식이 서로 맞지 않음
+
+디버깅 후 원인 ->Input should be a valid dictionary or object to extract fields from
+
+fastapi가  json 객체가 아니라 문자열로 받고 있음
+
+백엔드는 
+
+{
+  "room_id": 1,
+  "message": "테스트"
+}  이런 객체를 기대하는데, 
+
+실제로는 "{ room_id:1, ... }" 처럼 문자열 형태로 들어가는 중.
+
+
+원인 headers: { //headers 설정 (JSON 형식으로 데이터 보낸다고 서버에 알림)
+        "Content-Type": "application/json", 의 오타
+
+===================================
+
+
+5.//response 받은 뒤 약간 딜레이 후 한번 더 refresh
+      setTimeout(() => {
+        setRefreshTrigger((prev) => prev + 1);
+      }, 500);
+    }
+
+    프론트와 백엔드의 렌더 타이밍이 어긋나서, 백엔드에선 ai와 사용자 입력을 전부 db에 저장하고 있지만,
+    프론트에서는 보이지 않는 에러가 있었음. 재 렌더 코드 추가.
+
+    다크모드/화이트모드 충돌 해결 = index.css 충돌 제거
+    
