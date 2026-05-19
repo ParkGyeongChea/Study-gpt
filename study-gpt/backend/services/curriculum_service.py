@@ -38,20 +38,21 @@ from services.chat_message_service import get_chat_messages
 def start_study_service(
     db,
     user_id: int,
+    room_id: int,
     message: str,
     study_mode: str = "free"
 ):
     #=============================================================
     
     # 1.기존 학습 상태 존재 여부 검사(현재 로그인 사용자의 기존 학습 상태를 StudySession 테이블에서 조회)
-    session = get_study_session(db,user_id)
+    session = get_study_session(db,user_id,room_id)
     
     if session is not None:
         
         # 이전 채팅 기록 조회
-        chat_history = get_chat_messages(db,user_id)
+        chat_history = get_chat_messages(db,room_id)
         #chat_message_service.py(이전 채팅 조회 역할 파일)의 get_chat_messages 함수 호출
-        #현재 로그인 사용자의 이전 AI 대화 기록 전부 조회 , ChatMessage 전부 가져오기
+        #현재 로그인 사용자의 room 기준 메시지 조회
         
         
         # 기존 학습 이어하기 처리, DB에 기존 학습 상태가 존재하는 경우
@@ -136,6 +137,7 @@ def start_study_service(
     save_study_session(
         db=db,
         user_id=user_id,
+        room_id=room_id,
         category=category,
         topic=topic,
         level=level,

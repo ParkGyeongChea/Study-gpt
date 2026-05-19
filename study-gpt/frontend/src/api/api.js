@@ -23,7 +23,7 @@ api.interceptors.request.use(
   (config) => {
 
     // localStorage에 저장된 access_token 가져오기
-    const token = localStorage.getItem("access_token");
+    const token = localStorage.getItem("token");
 
     // 토큰 존재하면 Authorization 헤더 추가
     if (token) {

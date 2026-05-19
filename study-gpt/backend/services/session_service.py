@@ -19,6 +19,7 @@ from models.study_session import StudySession
 def save_study_session(
     db: Session,
     user_id: int,
+    room_id: int,
     category,
     topic,
     level,
@@ -30,9 +31,10 @@ def save_study_session(
 
     # 현재 로그인 사용자의 기존 학습 기록 조회
     session = db.query(StudySession).filter(
-        #db.query() = () 테이블 조회 시작
-        StudySession.user_id == user_id
-        #.filter(StudySession.user_id == user_id) = 현재 로그인 사용자 데이터만 찾기
+        #db.query() = () 테이블 조회 시작 
+        StudySession.user_id == user_id,
+        StudySession.room_id == room_id
+        #각 새로운 채팅방마다 새로운 session 시작
     ).first()
 
     # 기존 학습 기록이 있으면 UPDATE
@@ -49,9 +51,10 @@ def save_study_session(
     # 기존 기록이 없으면 새로 생성 (INSERT)
     else:
 
-        session = StudySession(
+        session = StudySession( 
 
             user_id=user_id,
+            room_id=room_id,
             category=category,
             topic=topic,
             level=level,
@@ -79,11 +82,14 @@ def save_study_session(
 
 def get_study_session(
     db: Session,
-    user_id: int
+    user_id: int,
+    room_id: int
 ):
 
     session = db.query(StudySession).filter(
-        StudySession.user_id == user_id
+        StudySession.user_id == user_id,
+        StudySession.room_id == room_id
+        
     ).first()
 
     return session
@@ -96,11 +102,13 @@ def get_study_session(
 def update_step_index(
     db: Session,
     user_id: int,
+    room_id: int,
     new_index
 ):
 
     session = db.query(StudySession).filter(
-        StudySession.user_id == user_id
+        StudySession.user_id == user_id,
+        StudySession.room_id == room_id
     ).first()
 
     if session:
@@ -121,11 +129,13 @@ def update_step_index(
 def update_current_step(
     db: Session,
     user_id: int,
+    room_id: int,
     step
 ):
 
     session = db.query(StudySession).filter(
-        StudySession.user_id == user_id
+        StudySession.user_id == user_id,
+        StudySession.room_id == room_id
     ).first()
 
     if session:
@@ -146,11 +156,13 @@ def update_current_step(
 def update_study_mode(
     db: Session,
     user_id: int,
+    room_id: int,
     mode
 ):
 
     session = db.query(StudySession).filter(
-        StudySession.user_id == user_id
+        StudySession.user_id == user_id,
+        StudySession.room_id == room_id
     ).first()
 
     if session:

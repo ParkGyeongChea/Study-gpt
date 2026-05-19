@@ -30,6 +30,12 @@ class StudySession(Base):
         ForeignKey("users.id") #user테이블의 id와 연결
     )
     
+    #현재 room 소속 조회
+    room_id = Column(
+        Integer,
+        ForeignKey("study_rooms.id")
+    )
+    
     # StudySession 테이블 구조 설계
     
     #현재 학습 주제 저장 컬럼

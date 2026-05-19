@@ -28,14 +28,15 @@ export default function ChatMessages({
   // selectedRoom 또는 refreshTrigger 변경 시 실행
   useEffect(() => {
 
-    // room 선택 안 된 상태면 중지
-    if (!selectedRoom) return;
+    // room 없으면 중지
+  if (!selectedRoom) return;
 
+  // 현재 messages 이미 있으면 fetch 안 함
+  if (messages.length > 0) return;
 
-    // 현재 room 메시지 조회
-    fetchMessages();
+  fetchMessages();
 
-  }, [selectedRoom, refreshTrigger]);
+}, [selectedRoom, refreshTrigger]);
 
 
   // backend 메시지 조회 함수

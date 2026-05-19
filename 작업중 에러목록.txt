@@ -60,4 +60,66 @@ fastapi가  json 객체가 아니라 문자열로 받고 있음
     프론트에서는 보이지 않는 에러가 있었음. 재 렌더 코드 추가.
 
     다크모드/화이트모드 충돌 해결 = index.css 충돌 제거
-    
+
+
+6.로그인/회원가입 프론트에서 만들었는데, 회원가입은 되는데 로그인이 안되는 오류
+
+OAuth2PasswordRequestForm 이 있어서 . 이 객체는 JSON 형식을 보내지 않는다.
+
+로그인시 프론트는 JSON 형식을 기대하는데 이 객체로 인해서 로그인이 되지 않고 401 오류가 남.
+
+이 코드 라인 삭제
+
+또, 토큰 저장 이름이 서로 달랐음
+
+로그인 성공시 JWT 를 로컬스토리지에 저장했는데, 저장할떄 이름이랑 읽어올 떄 이름이 달랐음.
+
+localStorage.setItem("token", JWT) , 즉 token 이라는 이름으로 저장.
+
+그런데 api 요청 보낼 때는 localStorage.getItem("access_token") access_token 으로 찾고 있었음.
+
+
+7.백엔드 프론트 구조 불일치로 인한 일반 설명 출력 불가
+
+기존에 비워뒀던 explain 부분 코드 추가
+
+elif intent == "explain":
+
+    response = explain_service(message)
+
+    save_chat_message(
+        db,
+        user_id,
+        room_id,
+        "assistant",
+        response["content"]
+    )
+
+    return {
+        "lecture": response
+    }
+
+
+    response.data.lecture.content 는 프론트 구조니까 구조 맞춰줌.
+
+
+8. 각 채팅방 마우스 클릭시 이동 안됨
+
+optimistic UI 해결하려고 추가했던 if (messages.length > 0) return; 이 코드가 ,room이동을 막음
+
+RoomList.jsx 코드 수정
+
+
+onClick={() => setSelectedRoom(room)} -> 
+
+
+onClick={() => {
+
+  setSelectedRoom(room);
+
+  setMessages([]);
+
+}}
+
+
+->setMessages([])-> messages 비워짐 -> ChatMessages useEffect 다시 fetch 가능 -> 새 room 메시지 정상 로딩

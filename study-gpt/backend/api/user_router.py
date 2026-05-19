@@ -27,8 +27,6 @@ from core.security import create_access_token
 
 from core.dependencies import get_current_user
 
-from fastapi.security import OAuth2PasswordRequestForm
-#FastAPI 공식 로그인 Form 처리
 
 #===============
 
@@ -60,7 +58,7 @@ def signup( #회원가입 요청을 받아서 DB저장 함수 실행 준비
 
 #로그인 API함수
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    data: UserLogin,
     #form_data = 로그인 form 데이터 저장 변수
     #OAuth2PasswordRequestForm = FastAPI 공식 OAuth2 로그인 form 처리 기능
     #Depends() = fastapi가 form 데이터를 자동으로 넣어주는 기능
@@ -72,8 +70,8 @@ def login(
     #로그인 가능한 유저인지 검사
     user = authenticate_user(  #authenticate_user = 이메일로 유저 조회, 존재 확인, bcrypt 비밀번호 비교, 성공시 유저 반환 역할
         db, #현재 연결 db전달
-        form_data.username, #Swagger username 입력칸 값 현재는 email 역할로 사용
-        form_data.password # 비밀번호 역할로 사용
+        data.email, 
+        data.password 
         
         #user = 로그인 성공한 유저 결과 저장. 로그인 성공 시, 안에 user 객체 들어감 실패 시 None
     )

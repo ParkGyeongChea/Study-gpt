@@ -14,6 +14,7 @@ from services.session_service import (get_study_session,update_step_index,update
 from services.chat_message_service import save_chat_message
 from services.room_service import (generate_room_title, update_room_title) #채팅방 관련 기능 파일 
 from services.chat_message_service import get_chat_messages #특정 room의 기존 채팅 메시지 목록 조회
+from services.chat_service import chat_service
 
 #===================================================================
 
@@ -308,6 +309,8 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
             user_id=user_id,
             # JWT 인증으로 확인된 현재 로그인 사용자 id 전달
 
+            room_id=room_id,
+            
             message=message,
             # 사용자 입력 메시지 전달
 
@@ -336,27 +339,44 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
 
     # explain 요청
     elif intent == "explain":
-        return explain_service(message)
+
+        response = explain_service(message)
+
+        save_chat_message(
+            db,
+            user_id,
+            room_id,
+            "assistant",
+            response["content"]
+        )
+
+        return {
+            "lecture": response
+        }
+
 
     # quiz 요청
     elif intent == "quiz":
         return {
-            "message": "퀴즈 기능 준비중"
+            "lecture": {
+                "content": "퀴즈 기능 준비중"
+            }
         }
 
     # 일반 대화
     else:
-        
-        response ={
-            "message": "일반 대화 기능 준비중"
-        }
+        response = chat_service(message)
         
         save_chat_message(
             db,
             user_id,
             room_id,
             "assistant",
-            response["message"]
+            response["content"]
         )
         
-        return response
+        return {
+            "lecture": {
+                "content": response["content"]
+            }
+        }

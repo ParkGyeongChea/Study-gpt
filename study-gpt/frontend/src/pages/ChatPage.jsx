@@ -15,8 +15,12 @@ import ChatMessages from "../components/ChatMessages";
 // 메시지 입력 컴포넌트 import
 import ChatInput from "../components/ChatInput";
 
+import { useNavigate } from "react-router-dom";
+
 
 export default function ChatPage() {
+
+  const navigate = useNavigate();
 
   // 현재 선택된 room 저장 state
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -30,6 +34,9 @@ export default function ChatPage() {
   // AI 응답 로딩 상태
   const [isLoading, setIsLoading] = useState(false);
 
+  // room 목록 새로고침 trigger state
+  const [roomRefreshTrigger, setRoomRefreshTrigger] = useState(0);
+
   // 왼쪽 사이드바 열림 여부 state
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -37,7 +44,24 @@ export default function ChatPage() {
   const [isSideChatOpen, setIsSideChatOpen] = useState(true);
 
   return (
-    <>
+    <div className="relative w-full h-screen bg-black">
+      {/* 로그인 / 회원가입 버튼 */}
+      <div className="absolute top-6 right-6 z-[120] flex gap-3">
+        <button
+          onClick={() => navigate("/login")}
+          className="px-4 py-2 text-sm text-white bg-zinc-800 rounded-lg hover:bg-zinc-700 transition"
+        >
+          로그인
+        </button>
+
+        <button
+          onClick={() => navigate("/signup")}
+          className="px-4 py-2 text-sm text-black bg-white rounded-lg hover:bg-zinc-200 transition"
+        >
+          회원가입
+        </button>
+      </div>
+
       {/* 왼쪽 sidebar toggle 버튼 */}
       <button
         onClick={() => setIsSidebarOpen((prev) => !prev)}
@@ -51,6 +75,7 @@ export default function ChatPage() {
       >
         ☰
       </button>
+
       {/* 오른쪽 sidechat toggle 버튼 */}
       <button
         onClick={() => setIsSideChatOpen((prev) => !prev)}
@@ -64,63 +89,69 @@ export default function ChatPage() {
       >
         ✦
       </button>
-      <div className="
-        flex h-screen
-        bg-white text-black
-        dark:bg-zinc-950 dark:text-white
-      ">
-        {/*=====================================*/}
+
+      <div
+        className="
+          flex h-screen
+          bg-white text-black
+          dark:bg-zinc-950 dark:text-white
+        "
+      >
         {/* 왼쪽 sidebar */}
-        {/*=====================================*/}
         {isSidebarOpen && (
-          <div className="
-            w-72 h-screen
-            border-r-4 border-gray-300
-            dark:border-zinc-800
-            bg-white
-            dark:bg-zinc-950
-            p-4 shrink-0
-          ">
+          <div
+            className="
+              w-72 h-screen
+              border-r-4 border-gray-300
+              dark:border-zinc-800
+              bg-white
+              dark:bg-zinc-950
+              p-4 shrink-0
+            "
+          >
             <RoomList
               setSelectedRoom={setSelectedRoom}
               setMessages={setMessages}
               setIsSidebarOpen={setIsSidebarOpen}
+              roomRefreshTrigger={roomRefreshTrigger}
             />
           </div>
         )}
-        {/*=====================================*/}
+
         {/* 오른쪽 메인 영역 */}
-        {/*=====================================*/}
-        <div className="
-          flex-1 min-h-screen
-          bg-white
-          dark:bg-zinc-950
-        ">
-          {/*=====================================*/}
-          {/* 홈 화면 */}
-          {/*=====================================*/}
+        <div
+          className="
+            flex-1 min-h-screen
+            bg-white
+            dark:bg-zinc-950
+          "
+        >
           {!selectedRoom ? (
-            <div className="
-              h-screen
-              flex flex-col
-              items-center
-              justify-center
-            ">
-              {/* 메인 로고 */}
-              <h1 className="
-                text-8xl
-                font-bold
-                text-blue-400
-                mb-10
-                -mt-20
-              ">
+            <div
+              className="
+                h-screen
+                flex flex-col
+                items-center
+                justify-center
+              "
+            >
+              <h1
+                className="
+                  text-8xl
+                  font-bold
+                  text-blue-400
+                  mb-10
+                  -mt-20
+                "
+              >
                 Study GPT
               </h1>
-              {/* 입력창 */}
+
               <div className="w-[700px]">
                 <ChatInput
                   selectedRoom={selectedRoom}
                   setSelectedRoom={setSelectedRoom}
+                  setRoomRefreshTrigger={setRoomRefreshTrigger}
                   setRefreshTrigger={setRefreshTrigger}
                   messages={messages}
                   setMessages={setMessages}
@@ -130,26 +161,24 @@ export default function ChatPage() {
               </div>
             </div>
           ) : (
-            /*=====================================*/
-            /* 실제 학습 화면 */
-            /*=====================================*/
-            <div className="
-              flex h-screen
-              bg-white
-              dark:bg-zinc-950
-            ">
-              {/* 중앙 메인 채팅 */}
+            <div
+              className="
+                flex h-screen
+                bg-white
+                dark:bg-zinc-950
+              "
+            >
               <div className="flex-1 min-w-0 px-6">
-                {/* 실제 채팅 영역 */}
-                <div className="
-                  w-full
-                  max-w-5xl
-                  mx-auto
-                  h-screen
-                  flex flex-col
-                  p-6
-                ">
-                  {/* 메시지 영역 */}
+                <div
+                  className="
+                    w-full
+                    max-w-5xl
+                    mx-auto
+                    h-screen
+                    flex flex-col
+                    p-6
+                  "
+                >
                   <div className="flex-1 overflow-y-auto">
                     <ChatMessages
                       selectedRoom={selectedRoom}
@@ -159,10 +188,11 @@ export default function ChatPage() {
                       isLoading={isLoading}
                     />
                   </div>
-                  {/* 입력창 */}
+
                   <ChatInput
                     selectedRoom={selectedRoom}
                     setSelectedRoom={setSelectedRoom}
+                    setRoomRefreshTrigger={setRoomRefreshTrigger}
                     setRefreshTrigger={setRefreshTrigger}
                     messages={messages}
                     setMessages={setMessages}
@@ -171,30 +201,37 @@ export default function ChatPage() {
                   />
                 </div>
               </div>
-              {/* 오른쪽 Side Chat */}
+
               {isSideChatOpen && (
-                <div className="
-                  w-72 h-screen shrink-0
-                  border-l-4 border-gray-300
-                  dark:border-zinc-800
-                  bg-white
-                  dark:bg-zinc-950
-                  p-4
-                ">
-                  <h2 className="
-                    text-xl
-                    font-bold
-                    text-black
-                    dark:text-white
-                    mb-4
-                    pl-[88px]
-                  ">
+                <div
+                  className="
+                    w-72 h-screen shrink-0
+                    border-l-4 border-gray-300
+                    dark:border-zinc-800
+                    bg-white
+                    dark:bg-zinc-950
+                    p-4
+                  "
+                >
+                  <h2
+                    className="
+                      text-xl
+                      font-bold
+                      text-black
+                      dark:text-white
+                      mb-4
+                      pl-[88px]
+                    "
+                  >
                     Side Chat
                   </h2>
-                  <div className="
-                    text-gray-600
-                    dark:text-gray-500
-                  ">
+
+                  <div
+                    className="
+                      text-gray-600
+                      dark:text-gray-500
+                    "
+                  >
                     학습 중 궁금한 내용을 빠르게
                     <br />
                     질문할 수 있습니다.
@@ -205,6 +242,6 @@ export default function ChatPage() {
           )}
         </div>
       </div>
-    </>
+    </div>
   );   
 }

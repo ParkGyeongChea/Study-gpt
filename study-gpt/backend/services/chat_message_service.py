@@ -24,7 +24,7 @@ def save_chat_message(
     
     #현재 로그인 사용자의 StudySession 조회
     
-    session = get_study_session(db,user_id) 
+    session = get_study_session(db,user_id,room_id) 
     #chatmessage 는 어느 학습 세션의 메시지인지 알아야 함.
     # session_service.py 파일(DB 학습 상태 조회 역할)의 get_study_session 함수 호출
     # 현재 로그인 사용자의 # StudySession 데이터를 조회

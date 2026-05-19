@@ -19,6 +19,9 @@ export default function ChatInput({
   setSelectedRoom,
   // 현재 선택 room 변경 함수
 
+  setRoomRefreshTrigger,
+  //현재 선택 room 초기화 함수
+
   setRefreshTrigger,
   // ChatMessages 다시 조회시키는 상태 변경 함수
 
@@ -92,6 +95,12 @@ export default function ChatInput({
 
       setSelectedRoom(currentRoom);
 
+      //새 채팅방 생성시 다시 조회
+      setRoomRefreshTrigger((prev) => prev + 1);
+
+      // room 생성 직후 messages 유지 강제
+      setMessages((prev) => [...prev]);
+
     }
 
 
@@ -101,6 +110,15 @@ export default function ChatInput({
 
     setIsLoading(true);
 
+    // 임시 AI 로딩 메시지
+    const loadingMessage = {
+      id: "loading",
+      role: "assistant",
+      content: "답변 생성 중..."
+    };
+    // 화면에 즉시 출력
+
+    setMessages((prev) => [...prev,loadingMessage]);
 
     //=====================================
     // backend AI 요청
@@ -118,6 +136,10 @@ export default function ChatInput({
 
       });
 
+      // agent_service에서 채팅방 제목이 자동 변경되었을 수 있으므로
+      // RoomList를 다시 조회시킴
+      setRoomRefreshTrigger((prev) => prev + 1);
+
 
       // assistant 메시지 생성
       const assistantMessage = {
@@ -133,10 +155,12 @@ export default function ChatInput({
 
       // assistant 메시지 추가
       setMessages((prev) => [
+        
+        // loading 메시지 제거
+        ...prev.filter((msg) => msg.id !== "loading"),
 
-        ...prev,
+         // 실제 AI 응답 추가
         assistantMessage
-
       ]);
 
 

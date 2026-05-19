@@ -9,54 +9,43 @@ import { useEffect, useState } from "react";
 // backend API 요청 객체 import
 import api from "../api/api";
 
+//토큰 저장/조회 담당파일 import
+import { getToken } from "../utils/auth";
+
 
 // RoomList 컴포넌트
 export default function RoomList({
-
   setSelectedRoom,
-
   setMessages,
-
-  setIsSidebarOpen
+  setIsSidebarOpen,
+  roomRefreshTrigger
 
 }) {
-
   // 메인 화면 이동 함수
   const goToHome = () => {
-
     setSelectedRoom(null);
-
     setMessages([]);
-
   };
-
 
   // 채팅방 목록 저장 state
   const [rooms, setRooms] = useState([]);
 
-
   // 화면 시작 시 자동 실행
   useEffect(() => {
-
+    const token = getToken();
+    //토큰 없으면 rooms 요청 안함
+    if (!token) return;
     fetchRooms();
-
-  }, []);
-
+  }, [roomRefreshTrigger]);
 
   // backend room 목록 요청 함수
   const fetchRooms = async () => {
-
     const response = await api.get("/rooms");
-
     setRooms(response.data);
-
   };
 
-
   return (
-
     <div>
-
       {/* 상단 헤더 영역 */}
       <div className="mb-4 space-y-3">
 
@@ -65,32 +54,22 @@ export default function RoomList({
 
           {/* Study GPT 로고 */}
           <h1
-
             onClick={goToHome}
-
             className="
               text-4xl
               font-extrabold
               cursor-pointer
-
               text-black
               dark:text-white
             "
-
           >
-
             Study GPT
-
           </h1>
-
         </div>
-
 
         {/* 새 채팅 버튼 */}
         <button
-
           onClick={goToHome}
-
           className="
             w-full
             bg-blue-500
@@ -98,25 +77,21 @@ export default function RoomList({
             p-3
             rounded
           "
-
         >
-
           + 새 채팅
-
         </button>
-
       </div>
-
 
       {/* room 배열 반복 출력 */}
       {rooms.map((room) => (
-
         <div
-
           key={room.id}
+          
+          onClick={() => {
+            setSelectedRoom(room);
+            setMessages([]);
 
-          onClick={() => setSelectedRoom(room)}
-
+          }}
           className="
             p-3 border-b
 
