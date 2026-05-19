@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 #회원가입,로그인 API에 필요한 기능(회원가입 검증 함수, 로그인 검증 함수)들 가져오기
 from db.database import get_db
 from schemas.user_schema import UserCreate, UserLogin
-from services.user_service import create_user,authenticate_user
+from services.user_service import (create_user, authenticate_user, delete_user)
 
 from core.security import create_access_token
 # core/security.py 파일
@@ -27,6 +27,7 @@ from core.security import create_access_token
 
 from core.dependencies import get_current_user
 
+from fastapi import HTTPException #fastapi 에러 응답 생성 기능
 
 #===============
 
@@ -44,7 +45,7 @@ def signup( #회원가입 요청을 받아서 DB저장 함수 실행 준비
     user_data: UserCreate, #회워나입 요청 데이터
     db: Session = Depends(get_db) #DB연결(Session) 자동 실행 , Depends(get_db)="DB연결 자동으로 준비"
 ):
-    new_user = create_user(db,user_data) #회원가입 데이터를 db에 저장 create_user = 회원가입 저장 서비스 함수
+    new_user = create_user(db,user_data.email, user_data.password) #회원가입 데이터를 db에 저장 create_user = 회원가입 저장 서비스 함수
     
     #회원가입 성공 결과 사용자에게 반환
     return {
@@ -78,7 +79,10 @@ def login(
     
     #로그인 실패 시 에러 메시지를 json으로 반환 = return {}
     if not user:
-        return {"message": "이메일 또는 비밀번호가 올바르지 않습니다."} 
+        raise HTTPException(
+            status_code=401,
+            detail="이메일 또는 비밀번호가 올바르지 않습니다."
+        )
           
     # 로그인 성공 시, 로그인한 사용자의 id를 이용해서 JWT access_token 생성
     access_token = create_access_token(user.id)
@@ -91,20 +95,34 @@ def login(
     }
 
 
-#테스트용 보호 API 생성 , /me = JWT 인증 테스트 API
-@router.get("/me")
-
 # 3. 현재 로그인 사용자 정보 반환 api 함수 생성
-def get_me(
-    current_user = Depends(get_current_user) 
+#테스트용 보호 API 생성 , /me = JWT 인증 테스트 API
+
+@router.get("/me")
+def get_me(current_user = Depends(get_current_user)):
     #current_user = 현재 로그인 사용자 저장 변수 
     #Depends(get_current_user) =  API 실행 전에 먼저 get_current_user() 실행해라
-):
+
     
-    return {
-    "email": current_user.email
-}
+    return {"email": current_user.email}
 # /me 요청 들어오면
 # → 먼저 JWT 검사
 # → 현재 로그인 사용자 찾기
 # → 성공하면 email 반환
+
+
+
+# 4. 회원탈퇴 API 추가 , DELETE 요청용 회원탈퇴 API 생성
+@router.delete("/users/me")
+def delete_me(
+
+    # DB 연결
+    db: Session = Depends(get_db),
+
+    # 현재 JWT 로그인 사용자 정보
+    current_user = Depends(get_current_user)
+):
+    # 회원 삭제 실행
+    delete_user(db,current_user.id) 
+
+    return {"message": "회원탈퇴가 완료되었습니다."}

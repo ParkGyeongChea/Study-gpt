@@ -1,3 +1,5 @@
+localStorage.clear() 로컬스토리지 초기화
+
 1. 5.18 프론트 작업중 http/https 에러 발생
 
  리액트에서 https 방식으로 백엔드에 접근하려고 했는데, fastapi 서버는 http 방식으로 실행중이었음.

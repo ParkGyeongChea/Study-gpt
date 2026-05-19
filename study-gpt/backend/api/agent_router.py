@@ -2,13 +2,14 @@
 
 # 사용자 요청을 받아서 → agent_service로 전달하는 역할 (라우터 = API 입구)
 
-from fastapi import APIRouter, Depends #Depends= 필요한 기능 자동 실행 기능
+from fastapi import APIRouter, Depends, Header 
+#Depends= 필요한 기능 자동 실행 기능 , Header = JWT 토큰 없어도 허용하는 수동 처리
 from schemas.study_schema import StudyRequest # 요청 데이터 형식을 정의한 Pydantic 모델
 from services import agent_service 
 from sqlalchemy.orm import Session #DB 연결 객체 타입(Session) 불러오기
 from db.database import get_db #DB 연결 생성 함수 get_db 불러오기
 
-from core.dependencies import get_current_user #JWT 인증 + 현재 사용자 확인 담당 파일)의 get_current_user 함수 불러오기
+from core.security import get_user_id_from_token #JWT-> user_id 추출을 직접 시도하려고 가져옴
 
 #===============================================================
 
@@ -24,17 +25,34 @@ def run_agent(
     #get_db() 실행해서 DB연결 자동 준비
     #이제 학습 상태를 DB저장 해야해서 필요.
     
-    current_user = Depends(get_current_user)
-    #JWT 인증 실행 -> 현재 로그인 사용자 자동 조회
-    # 내부적으로 벌어지는 일은 Authorization 헤더 확인 → JWT decode → user_id 추출 → DB에서 실제 사용자 조회 → current_user 반환
-    # 즉 이제 current_user 안에는 실제 로그인 사용자 객체가 들어있다.(current_user.id , current_user.email)
-    # 누가 요청했는지 알게 되는 첫 단계. 사용자별 학습 상태 저장이 가능해짐
+    authorization: str | None = Header(default=None)
+    #str | None = 문자열 또는 none 허용
+    #브라우저가 보내는 JWT 토큰 문자열 저장 변수, HTTP 헤더에서 값을 가져옴
+    #default=None = JWT 없어도 에러가 나지 않음
+    
     ):
-  
+    
+    # 기본값은 비로그인 사용자
+    user_id = None
+    
+    # JWT 존재 시 로그인 사용자 조회
+    if authorization: #JWT 토큰이 존재하나? 검사
+        
+        try: #여기서 JWT 해석 시도
+            
+            # "Bearer xxx" 에서 JWT만 추출
+            token = authorization.replace("Bearer ", "")
+
+            # JWT에서 user_id 추출
+            user_id = get_user_id_from_token(token)
+            
+        #JWT 만료/오류 발생 시 로그인 실패 처리
+        except: 
+            user_id = None
     
     return agent_service.run(
         db=db, #현재 db연결 전달
-        user_id=current_user.id, #jwt 인증으로 확인된 현재 로그인 사용자 id전달
+        user_id=user_id,
         room_id=request.room_id,
         message=request.message, #사용자 입력 메시지 전달
         study_mode=request.study_mode #현재 학습 모드 전달

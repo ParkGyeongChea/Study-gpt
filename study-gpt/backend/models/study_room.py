@@ -41,13 +41,33 @@ class StudyRoom(Base):
     #default = 처음 생성될 떄 시간 저장
     #onupdate = 이 row 수정될 때마다 현재 시간 자동 갱신
     
-    #이 채팅방과 사용자를 파이썬 코드에서 연결해주는 코드
-    user = relationship("User", back_populates="study_rooms")
+    
+    
+    # 유저 연결,이 채팅방과 사용자를 파이썬 코드에서 연결해주는 코드
+    user = relationship(
+        "User",
+        back_populates="study_rooms"
+        )
     # back_populates = 양쪽 모델을 서로 연결해주는 이름 연결 장치
     # study_rooms = relationship("StudyRoom", back_populates="user")은 user에서 연결.
     #쌍방향 연결이다. 채팅방과 유저는 연결되어야 함.
     #User 쪽 이름 = study_rooms
     # StudyRoom 쪽 이름 = user
+        
 
-    #chat_message 쪽과 쌍방향 연결
-    messages = relationship("ChatMessage", back_populates="room")
+    #채팅 메시지 연결,chat_message 쪽과 쌍방향 연결
+    messages = relationship(
+        "ChatMessage",
+        back_populates="room",
+        cascade="all, delete-orphan" #채팅방 삭제 시, 메시지도 전부 삭제
+    )
+    
+    
+    # 현재 채팅방의 학습 세션 목록 연결
+    sessions = relationship(
+        "StudySession",
+        back_populates="room",
+
+        # 채팅방 삭제 시 세션도 삭제
+        cascade="all, delete-orphan"
+    )

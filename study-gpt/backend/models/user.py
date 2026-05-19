@@ -1,4 +1,4 @@
-#user.py
+#models/user.py
 
 #DB 연결 관리
 #유저 테이블 
@@ -32,9 +32,24 @@ class User(Base): #user 라는 db 모델 클래스 생성
     
     
     #이 사용자가 가진 채팅방 목록을 연결하는 코드
-    study_rooms = relationship("StudyRoom", back_populates="user")
-    # back_populates = 양쪽 모델을 서로 연결해주는 이름 연결 장치
-    #user = relationship("User", back_populates="study_rooms") 은 study_room에서 연결.
+    study_rooms = relationship(
+        "StudyRoom",
+        back_populates="user",
+        # back_populates = 양쪽 모델을 서로 연결해주는 이름 연결 장치
+        # user = relationship("User", back_populates="study_rooms") 은 study_room에서 연결.
+        cascade="all, delete-orphan"
+         #cascade="all, delete-orphan" = user 삭제 시, 연결된 채팅방도 전부 삭제
+        )
+
     #쌍방향 연결이다. 채팅방과 유저는 연결되어야 함.
     #User 쪽 이름 = study_rooms
     # StudyRoom 쪽 이름 = user
+   
+    #이 사용자의 학습 세션 목록 연결
+    study_sessions = relationship(
+        "StudySession",
+        back_populates="user",
+        
+        #user삭제 시 학습 세션도 같이 삭제
+        cascade="all, delete-orphan"
+    )

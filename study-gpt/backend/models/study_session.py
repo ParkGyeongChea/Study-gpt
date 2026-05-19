@@ -6,7 +6,7 @@
 
 from db.database import Base #모든 DB 테이블의 부모 클래스 역할을 하는 Base 불러오기
 from sqlalchemy import Column, Integer, String, ForeignKey, JSON
-
+from sqlalchemy.orm import relationship
 # sqlalchemy 공간(DB ORM 기능 모음)의
 # Column = 테이블 컬럼 생성 기능
 # Integer = 숫자 타입
@@ -61,3 +61,21 @@ class StudySession(Base):
     
     #progress 컬럼 (현재 학습 진행률 저장 컬럼 Interger= 퍼센트 숫자로 저장. / 기본적으로 0%시작)
     progress = Column(Integer, default=0)
+    
+        
+    # User 모델과 연결 
+   
+    user = relationship( #studysession -> user 연결
+        "User",
+        back_populates="study_sessions" #User 모델의 studysessions 와 연결
+    )
+
+    
+    # StudyRoom 모델과 연결
+    
+    room = relationship(
+        #현재 학습 세션이 어느 채팅방 소속인지 연결
+        #현재 models/user.py 에  User.study_sessions 추가했음. 그럼 SQLAlchemy는 반대 쪽에도 연결이 있어야 해서, 연결하는 것      
+        "StudyRoom",
+        back_populates="sessions"
+    )

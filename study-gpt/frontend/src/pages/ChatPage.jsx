@@ -4,7 +4,7 @@
 //====================================
 
 // React 상태(state) 기능 import
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // 채팅방 목록 컴포넌트 import
 import RoomList from "../components/RoomList";
@@ -41,26 +41,30 @@ export default function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   //오른쪽 사이드바 열림 여부 state
-  const [isSideChatOpen, setIsSideChatOpen] = useState(true);
+  const [isSideChatOpen, setIsSideChatOpen] = useState(false);
+
+  //오른쪽 사이드바 
+  const [showSideChatContent, setShowSideChatContent] = useState(true);
+
+  //오른쪽 사이드바 효과
+
+  useEffect(() => {
+
+    if (isSideChatOpen) {
+
+      const timer = setTimeout(() => {
+        setShowSideChatContent(true);
+      }, 200);
+
+      return () => clearTimeout(timer);
+    }
+
+    setShowSideChatContent(false);
+
+  }, [isSideChatOpen]);
 
   return (
-    <div className="relative w-full h-screen bg-black">
-      {/* 로그인 / 회원가입 버튼 */}
-      <div className="absolute top-6 right-6 z-[120] flex gap-3">
-        <button
-          onClick={() => navigate("/login")}
-          className="px-4 py-2 text-sm text-white bg-zinc-800 rounded-lg hover:bg-zinc-700 transition"
-        >
-          로그인
-        </button>
-
-        <button
-          onClick={() => navigate("/signup")}
-          className="px-4 py-2 text-sm text-black bg-white rounded-lg hover:bg-zinc-200 transition"
-        >
-          회원가입
-        </button>
-      </div>
+    <div className="relative w-full h-screen overflow-hidden bg-black">
 
       {/* 왼쪽 sidebar toggle 버튼 */}
       <button
@@ -77,18 +81,20 @@ export default function ChatPage() {
       </button>
 
       {/* 오른쪽 sidechat toggle 버튼 */}
-      <button
-        onClick={() => setIsSideChatOpen((prev) => !prev)}
-        className={`
-          fixed top-[12px] z-[100]
-          text-3xl
-          text-black dark:text-white
-          transition-all duration-300
-          ${isSideChatOpen ? "right-[270px]" : "right-6"}
-        `}
-      >
-        ✦
-      </button>
+        {selectedRoom && (
+        <button
+          onClick={() => setIsSideChatOpen((prev) => !prev)}
+          className={`
+            fixed top-[12px] z-[100]
+            text-3xl
+            text-black dark:text-white
+            transition-all duration-300
+            ${isSideChatOpen ? "right-[270px]" : "right-6"}
+          `}
+        >
+          ✦
+        </button>
+      )}
 
       <div
         className="
@@ -98,25 +104,27 @@ export default function ChatPage() {
         "
       >
         {/* 왼쪽 sidebar */}
-        {isSidebarOpen && (
-          <div
-            className="
-              w-72 h-screen
-              border-r-4 border-gray-300
-              dark:border-zinc-800
-              bg-white
-              dark:bg-zinc-950
-              p-4 shrink-0
-            "
-          >
-            <RoomList
-              setSelectedRoom={setSelectedRoom}
-              setMessages={setMessages}
-              setIsSidebarOpen={setIsSidebarOpen}
-              roomRefreshTrigger={roomRefreshTrigger}
-            />
-          </div>
-        )}
+        <div
+          className={`
+            h-screen
+            border-r-4 border-gray-300
+            dark:border-zinc-800
+            bg-white
+            dark:bg-zinc-950
+            p-4 shrink-0
+            transition-[width] duration-300
+
+            ${isSidebarOpen ? "w-72" : "w-20"}
+          `}
+        >
+          <RoomList
+            setSelectedRoom={setSelectedRoom}
+            setMessages={setMessages}
+            setIsSidebarOpen={setIsSidebarOpen}
+            isSidebarOpen={isSidebarOpen}
+            roomRefreshTrigger={roomRefreshTrigger}
+          />
+        </div>
 
         {/* 오른쪽 메인 영역 */}
         <div
@@ -126,7 +134,7 @@ export default function ChatPage() {
             dark:bg-zinc-950
           "
         >
-          {!selectedRoom ? (
+          {!selectedRoom && messages.length === 0 ? (
             <div
               className="
                 h-screen
@@ -202,17 +210,40 @@ export default function ChatPage() {
                 </div>
               </div>
 
-              {isSideChatOpen && (
+              <div
+                className={`
+                  relative h-screen
+                  shrink-0
+                  overflow-hidden
+
+                  border-l-4 border-gray-300
+                  dark:border-zinc-800
+
+                  bg-white
+                  dark:bg-zinc-950
+
+                  transition-[width] duration-300
+
+                  ${isSideChatOpen ? "w-72 p-4" : "w-0 p-0 border-l-0"}
+                `}
+              >
+
                 <div
-                  className="
-                    w-72 h-screen shrink-0
-                    border-l-4 border-gray-300
-                    dark:border-zinc-800
-                    bg-white
-                    dark:bg-zinc-950
+                  className={`
+                    absolute
+                    top-0 left-0
+
+                    w-72
                     p-4
-                  "
+
+                    transition-opacity duration-150
+
+                    ${showSideChatContent
+                      ? "opacity-100"
+                      : "opacity-0"}
+                  `}
                 >
+
                   <h2
                     className="
                       text-xl
@@ -236,8 +267,10 @@ export default function ChatPage() {
                     <br />
                     질문할 수 있습니다.
                   </div>
+
                 </div>
-              )}
+
+              </div>
             </div>
           )}
         </div>

@@ -18,10 +18,10 @@ llm = ChatOpenAI(
 
 # 퀴즈 생성 함수
 # db에서 현재 로그인 사용자 기준 학습 상태를 가져옴
-def generate_quiz(db, user_id: int):
+def generate_quiz(db, user_id: int, room_id: int):
     
     #1.현재 학습 상태 가져오기
-    session = get_study_session(db, user_id)
+    session = get_study_session(db, user_id, room_id)
     # session_service.py 파일에서,
     # 현재 학습 상태를 반환하는 역할을 하는
     # get_study_session() 함수 실행

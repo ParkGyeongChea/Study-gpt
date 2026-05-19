@@ -23,21 +23,40 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
     # 사용자 입력을 받아 intent 분석 후 기능을 분기하고,
     # 현재 로그인 사용자(user_id)와 DB 연결(db)을 함께 전달하는 AI 기능 중앙 제어 함수
     
-    #현재 room의 기존 메시지 가져오기 , 이 아래 코드는 제목을 자동 생성하는 코드이기 때문이기떄문에,
-    #메시지가 저장되기 전에 , 첫 메시지라고 판단을 할수 있게끔 함
-    messages = get_chat_messages(db, room_id)
+    #비 로그인 상태의 사용자는 room_id가 없으므로, 로그인 사용자일 때만 메시지 조회
+    messages = []
+
+    # 로그인 사용자일 때만 기존 메시지 조회
+    if user_id and room_id:
+
+        messages = get_chat_messages(db, room_id)
+        
     
-    #첫 메시지인지 확인 , 메시지 개수가 0개면,
-    if len(messages) == 0:
+    #==========================================
+    #첫 메시지 제목 자동 생성 기능 임시 비활성화.
+    #openAI quota 초과 방지
+    
+    # 로그인 사용자이고, room_id가 있고 첫 메시지일 때만 채팅방 제목 자동 생성.
+    if user_id and room_id and len(messages) == 0:
         
         #사용자 첫 메시지 기반 제목 생성 , gpt에게 제목 생성 요청
         new_title = generate_room_title(message)
         
         #실제 DB room 제목 수정
         update_room_title(db, room_id, new_title)
+    #==========================================
     
-    #현재 로그인 사용자의 메시지를 chat_message테이블에  저장
-    save_chat_message(db,user_id,room_id,"user",message)
+    
+    # 로그인 사용자일 때만 메시지 저장
+    if user_id and room_id:
+
+        save_chat_message(
+            db,
+            user_id,
+            room_id,
+            "user",
+            message
+        )
     
     
     # =========================
@@ -45,12 +64,20 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
     # =========================
 
     if message.strip() in ["다음", "다음 단계", "계속"]:
+        
+        if not user_id or not room_id:
+            return {
+                "lecture": {
+                    "content": "로그인 후 학습 기록을 저장하면 다음 단계 기능을 사용할 수 있습니다."
+                }
+            }
+            
         # 현재는 임시로 if문 사용
         # 추후에는 LLM에게 자연어 의도 판단을 맡기는 방식 사용 가능
         # 예: LangChain / Agent 방식
 
         # ===== 현재 로그인 사용자의 학습 상태 가져오기 =====
-        session = get_study_session(db, user_id)
+        session = get_study_session(db, user_id, room_id)
         # session_service.py 파일(사용자 학습 상태를 DB에서 조회하는 역할)의
         # get_study_session 함수 호출
         # 이제 학습 상태는 study_session = {} 딕셔너리에서 가져오는 게 아니라,
@@ -103,12 +130,12 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
         new_index = current_step_index + 1
         # 현재 index에서 1을 더해서 다음 단계 index를 만든다.
 
-        update_step_index(db, user_id, new_index)
+        update_step_index(db, user_id, room_id, new_index)
         # session_service.py 파일(사용자 학습 단계 index를 DB에서 수정하는 역할)의
         # update_step_index 함수 호출
         # 현재 로그인 사용자의 current_step_index 값을 DB에 저장한다.
 
-        update_current_step(db, user_id, next_step)
+        update_current_step(db, user_id, room_id, next_step)
         # session_service.py 파일(현재 학습 step 객체를 DB에서 수정하는 역할)의
         # update_current_step 함수 호출
         # 현재 로그인 사용자의 current_step 값을 next_step으로 DB에 저장한다.
@@ -152,8 +179,10 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
         # generate_step_lecture 함수 호출
         # DB에서 가져온 category/topic/level과 다음 step을 이용해서 GPT 강의를 생성한다.
 
-        #AI 강의 응답을 chat_message 테이블에 저장
-        save_chat_message(db,user_id,room_id,"assistant",lecture["content"])
+        #AI 강의 응답을 chat_message 테이블에 저장 ,로그인 사용자에 한해서만
+        if user_id and room_id:
+            
+           save_chat_message(db,user_id,room_id,"assistant",lecture["content"])
     
     
         #========= light_quiz 모드 퀴즈 생성 =============
@@ -164,7 +193,7 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
         if session.study_mode == "light_quiz":
             # 현재 학습 모드가 light_quiz인지 검사
 
-            quiz = generate_quiz(db, user_id)
+            quiz = generate_quiz(db, user_id, room_id)
             # quiz_service.py 파일(현재 학습 상태 기준 퀴즈 생성 역할)의
             # generate_quiz 함수 호출
             # 현재 구조에서는 DB에서 현재 로그인 사용자의 session을 조회해야 하므로
@@ -189,12 +218,17 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
     # =========================
 
     if "다시" in message or "모르겠어" in message:
+        
+        #임시 에러 대비 코드 추후에 삭제or변경
+        if not user_id or not room_id:
+            return {
+                "lecture": {
+                    "content": "로그인 후 학습 기록을 저장하면 다시 설명 기능을 사용할 수 있습니다."
+                }
+            }
 
         # ===== 현재 로그인 사용자의 학습 상태 가져오기 =====
-        session = get_study_session(
-            db,
-            user_id
-        )
+        session = get_study_session(db,user_id,room_id)
         # session_service.py 파일(사용자 학습 상태를 DB에서 조회하는 역할)의
         # get_study_session 함수 호출
 
@@ -228,8 +262,9 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
         # 현재 step 기준으로 강의를 다시 생성한다.
 
 
-        #AI 강의 응답을 chat_message 테이블에 저장
-        save_chat_message(db,user_id,room_id,"assistant",lecture["content"])
+        # 로그인 사용자에 한해서만 AI 강의 응답을 chat_message 테이블에 저장
+        if user_id and room_id:
+            save_chat_message(db,user_id,room_id,"assistant",lecture["content"])
 
         #========== progress(학습 진행도) 기능 ========
 
@@ -255,6 +290,22 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
                 "percent": progress_percent
             }
         }
+        
+    # 비로그인 사용자는 DB 기반 학습 시스템으로 보내지 않고
+    # 임시 체험 응답을 바로 반환
+    if not user_id or not room_id:
+
+        return {
+            "lecture": {
+            "content": f"""
+            현재는 비로그인 상태입니다.
+
+            '{message}' 요청을 확인했습니다.
+
+            로그인하면 학습 기록 저장, 채팅방 저장, 이어하기 기능을 사용할 수 있습니다.
+            """
+            }
+        }
 
     # =========================
     # 일반 intent 분석
@@ -271,7 +322,6 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
     # =========================
 
     if intent == "study":
-
         if study_mode is None:
             # 사용자가 공부 요청은 했지만 아직 학습 모드를 선택하지 않은 경우
             # 바로 학습을 시작하지 않고, 프론트에 모드 선택 UI를 띄울 수 있는 응답을 반환한다.
@@ -326,7 +376,8 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
         # AI 강의 응답 저장
         #=======================
         
-        if "lecture" in study_result: #의미 = lecture 가 있을 때만 AI강의 내용을 저장, lecture가 없으면 저장하지 않고 그냥 반환
+        if "lecture" in study_result and user_id and room_id:
+            #사용자가 로그인했을 시에 lecture 가 있을 때만 AI강의 내용을 저장, lecture가 없으면 저장하지 않고 그냥 반환
             save_chat_message( #lecture = ai가 생성한 강의 내용
                 db,
                 user_id,
@@ -341,14 +392,16 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
     elif intent == "explain":
 
         response = explain_service(message)
-
-        save_chat_message(
-            db,
-            user_id,
-            room_id,
-            "assistant",
-            response["content"]
-        )
+        
+        #사용자가 로그인 했을 시에만 아래 데이터 저장
+        if user_id and room_id:
+            save_chat_message(
+                db,
+                user_id,
+                room_id,
+                "assistant",
+                response["content"]
+            )
 
         return {
             "lecture": response
@@ -367,13 +420,15 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
     else:
         response = chat_service(message)
         
-        save_chat_message(
-            db,
-            user_id,
-            room_id,
-            "assistant",
-            response["content"]
-        )
+        #사용자가 로그인 했을 시에만 아래 데이터 저장
+        if user_id and room_id:
+            save_chat_message(
+                db,
+                user_id,
+                room_id,
+                "assistant",
+                response["content"]
+            )
         
         return {
             "lecture": {

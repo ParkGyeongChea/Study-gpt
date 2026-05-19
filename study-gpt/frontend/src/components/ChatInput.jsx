@@ -51,6 +51,8 @@ export default function ChatInput({
   //=====================================
 
   const handleSend = async () => {
+    
+   
 
     // 공백 입력 방지
     if (!message.trim()) return;
@@ -61,34 +63,33 @@ export default function ChatInput({
     //=====================================
 
     const tempMessage = {
-
       id: Date.now(),
-
       role: "user",
-
       content: message
-
     };
 
+    // 입력창 즉시 초기화
+    setMessage("");
 
+    
+    
     // 기존 메시지 배열 뒤에 추가
     setMessages((prev) => [...prev, tempMessage]);
-
 
     // 현재 room 임시 저장
     let currentRoom = selectedRoom;
 
+    // 현재 로그인 토큰 확인
+    const token = localStorage.getItem("token");
+
 
     //=====================================
-    // room 없는 경우 새 room 생성
+    // room 없는 경우, 로그인 상태일 떄만 생성
     //=====================================
 
-    if (!currentRoom) {
-
+    if (!currentRoom && token) {
       const roomResponse = await api.post("/rooms", {
-
         title: "새 채팅"
-
       });
 
       currentRoom = roomResponse.data;
@@ -110,6 +111,7 @@ export default function ChatInput({
 
     setIsLoading(true);
 
+
     // 임시 AI 로딩 메시지
     const loadingMessage = {
       id: "loading",
@@ -123,19 +125,28 @@ export default function ChatInput({
     //=====================================
     // backend AI 요청
     //=====================================
+    // agent 요청 데이터 생성
+
+    const requestData = {
+
+      message: message,
+
+      study_mode: selectedMode
+    };
+    
+    // 로그인 상태일 때만 room_id 추가
+    if (currentRoom?.id) {
+
+      requestData.room_id = currentRoom.id;
+    }
 
     try {
 
-      const response = await api.post("/agent", {
+      
 
-        room_id: currentRoom.id,
+      const response = await api.post("/agent", requestData);
 
-        message: message,
-
-        study_mode: selectedMode
-
-      });
-
+     
       // agent_service에서 채팅방 제목이 자동 변경되었을 수 있으므로
       // RoomList를 다시 조회시킴
       setRoomRefreshTrigger((prev) => prev + 1);
@@ -148,24 +159,36 @@ export default function ChatInput({
 
         role: "assistant",
 
-        content: response.data.lecture.content
+        content:
+          response.data?.lecture?.content ||
+          response.data?.message ||
+          "응답을 불러오지 못했습니다."
 
       };
 
 
       // assistant 메시지 추가
-      setMessages((prev) => [
-        
-        // loading 메시지 제거
-        ...prev.filter((msg) => msg.id !== "loading"),
+      setMessages((prev) => {
 
-         // 실제 AI 응답 추가
-        assistantMessage
-      ]);
+        // loading 메시지만 제거
+        const filteredMessages = prev.filter(
+          (msg) => msg.id !== "loading"
+        );
 
+        // 기존 메시지 유지 + assistant 추가
+        return [...filteredMessages, assistantMessage];
 
-      // ChatMessages 재조회 trigger
-      setRefreshTrigger((prev) => prev + 1);
+      });
+
+      // 디버그코드
+      console.log("6. assistant 메시지 state 업데이트 완료");
+
+      //로그인 상태일 떄만 ChatMessages 재조회 trigger
+      if (currentRoom?.id) {
+
+        setRefreshTrigger((prev) => prev + 1);
+
+      }
 
     } catch (error) {
 
@@ -177,11 +200,6 @@ export default function ChatInput({
       setIsLoading(false);
 
     }
-
-
-    // 입력창 초기화
-    setMessage("");
-
   };
 
 
@@ -208,33 +226,28 @@ export default function ChatInput({
       ">
 
         {/* 실제 메시지 입력창 */}
-        <input
-
-          type="text"
-
+        <textarea //여러 줄 입력 기능
           value={message}
-
           onChange={(e) => setMessage(e.target.value)}
-
           placeholder="무엇을 배우고 싶나요?"
 
+          // Enter 전송 / Shift+Enter 줄바꿈
+          onKeyDown={async (e) => {
 
-          // Enter 입력 시 메시지 전송
-          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
 
-            if (e.key === "Enter") {
+              e.preventDefault();
 
-              handleSend();
-
+              await handleSend();
             }
-
           }}
 
-
+          rows={1}
           className="
             w-full
             bg-transparent
             outline-none
+            resize-none
 
             text-black
             dark:text-white

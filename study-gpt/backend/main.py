@@ -22,6 +22,18 @@ from models.study_room import StudyRoom
 # FastAPI 앱 생성
 app = FastAPI()
 
+#에러 디버깅 코드 ============
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+#=========
+
 #Base에 등록된 모든 테이블 실제 DB에 생성
 Base.metadata.create_all(bind=engine)
 #metadata = 등록된 테이블 정보 목록
