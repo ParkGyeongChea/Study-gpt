@@ -5,7 +5,26 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+  extend: {
+    keyframes: {
+      fadeIn: {
+        "0%": {
+          opacity: "0",
+          transform: "translateY(25px)"
+        },
+        "100%": {
+          opacity: "1",
+          transform: "translateY(0px)"
+        }
+      }
+    },
+    animation: {
+      messageFade: "fadeIn 0.4s ease",
+      pageFade: "fadeIn 0.8s ease"
+    }
   },
-  plugins: [],
+},
+  plugins: [
+    require("@tailwindcss/typography"),
+  ],
 }

@@ -233,7 +233,22 @@ DB 에 학습 흐름도, 사용자와 AI간 채팅 내역 저장 기능 완료
 비로그인 상태 메시지 전송 불가 문제 해결
 
 ==============================================
-이후 작업 = 최근 대화순 정렬 , 채팅방 삭제 추가
+5.21
+최근 채팅 정렬 안정화 , 채팅방 메시지 입력시 가장 위로 이동되게 수정
+선택된 채팅방 hover, 간단한 표시 효과 추가
+AI 응답 UX 디자인 개선
+npm install react-markdown 설치 ,(AI 응답 메시지 꾸미기 , 마크다운)
+npm install react-syntax-highlighter (코드 전용 블럭, + syntax highlight, padding, dark theme) 바꿔추는 패키지 추가
+npm install -D @tailwindcss/typography 추가
+npm install lucide-react 추가,(복사, 복사 완료 체크 아이콘)
+채팅방 삭제 추가
+코드블럭 언어 표시
+홈 화면-> 채팅방 첫 진입시 애니메이션
+AI 메시지 fade-in 애니메이션
+
+
+
+===================================
 
 그 이후 백엔드 AI집중 개발 랭체인,랭그래프,RAG
 

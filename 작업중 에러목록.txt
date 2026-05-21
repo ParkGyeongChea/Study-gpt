@@ -125,3 +125,6 @@ onClick={() => {
 
 
 ->setMessages([])-> messages 비워짐 -> ChatMessages useEffect 다시 fetch 가능 -> 새 room 메시지 정상 로딩
+
+
+9 JWT 에러 발생: Signature has expired. = 로그인 토큰 만료

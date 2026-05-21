@@ -43,8 +43,21 @@ export default function ChatPage() {
   //오른쪽 사이드바 열림 여부 state
   const [isSideChatOpen, setIsSideChatOpen] = useState(false);
 
+  
+
   //오른쪽 사이드바 
   const [showSideChatContent, setShowSideChatContent] = useState(true);
+
+  //채팅방 첫 진입 시 사이드바는 무조건 닫힌 상태
+  const handleSetSelectedRoom = (room) => {
+
+    // 채팅방 이동 시 sidechat 강제 닫기
+    setIsSideChatOpen(false);
+
+    // room 변경
+    setSelectedRoom(room);
+
+  };
 
   //오른쪽 사이드바 효과
 
@@ -73,7 +86,7 @@ export default function ChatPage() {
           fixed top-[19px] z-[100]
           text-3xl
           text-black dark:text-white
-          transition-all duration-300
+          transition-[left] duration-300
           ${isSidebarOpen ? "left-[250px]" : "left-6"}
         `}
       >
@@ -88,7 +101,7 @@ export default function ChatPage() {
             fixed top-[12px] z-[100]
             text-3xl
             text-black dark:text-white
-            transition-all duration-300
+            transition-[right] duration-300
             ${isSideChatOpen ? "right-[270px]" : "right-6"}
           `}
         >
@@ -118,7 +131,8 @@ export default function ChatPage() {
           `}
         >
           <RoomList
-            setSelectedRoom={setSelectedRoom}
+            selectedRoom={selectedRoom}
+            setSelectedRoom={handleSetSelectedRoom}
             setMessages={setMessages}
             setIsSidebarOpen={setIsSidebarOpen}
             isSidebarOpen={isSidebarOpen}
@@ -158,7 +172,7 @@ export default function ChatPage() {
               <div className="w-[700px]">
                 <ChatInput
                   selectedRoom={selectedRoom}
-                  setSelectedRoom={setSelectedRoom}
+                  setSelectedRoom={handleSetSelectedRoom}
                   setRoomRefreshTrigger={setRoomRefreshTrigger}
                   setRefreshTrigger={setRefreshTrigger}
                   messages={messages}
@@ -176,11 +190,18 @@ export default function ChatPage() {
                 dark:bg-zinc-950
               "
             >
-              <div className="flex-1 min-w-0 px-6">
+              <div className="
+                    flex-1
+                    min-w-0
+                    px-6
+
+                    transition-all
+                    duration-300
+                  ">
                 <div
                   className="
-                    w-full
-                    max-w-5xl
+                    w-[1100px]
+                    max-w-full
                     mx-auto
                     h-screen
                     flex flex-col
@@ -196,17 +217,17 @@ export default function ChatPage() {
                       isLoading={isLoading}
                     />
                   </div>
-
-                  <ChatInput
-                    selectedRoom={selectedRoom}
-                    setSelectedRoom={setSelectedRoom}
-                    setRoomRefreshTrigger={setRoomRefreshTrigger}
-                    setRefreshTrigger={setRefreshTrigger}
-                    messages={messages}
-                    setMessages={setMessages}
-                    isLoading={isLoading}
-                    setIsLoading={setIsLoading}
-                  />
+                  
+                    <ChatInput
+                      selectedRoom={selectedRoom}
+                      setSelectedRoom={handleSetSelectedRoom}
+                      setRoomRefreshTrigger={setRoomRefreshTrigger}
+                      setRefreshTrigger={setRefreshTrigger}
+                      messages={messages}
+                      setMessages={setMessages}
+                      isLoading={isLoading}
+                      setIsLoading={setIsLoading}
+                    />
                 </div>
               </div>
 
@@ -216,15 +237,19 @@ export default function ChatPage() {
                   shrink-0
                   overflow-hidden
 
-                  border-l-4 border-gray-300
-                  dark:border-zinc-800
-
                   bg-white
                   dark:bg-zinc-950
 
                   transition-[width] duration-300
 
-                  ${isSideChatOpen ? "w-72 p-4" : "w-0 p-0 border-l-0"}
+                  ${selectedRoom
+                    ? (
+                        isSideChatOpen
+                          ? "w-72 p-4 border-l-4 border-gray-300 dark:border-zinc-800"
+                          : "w-0 p-0 border-l-0"
+                      )
+                    : "w-0 p-0 border-l-0"
+                  }
                 `}
               >
 

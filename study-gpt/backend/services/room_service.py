@@ -86,3 +86,20 @@ def update_room_title(db, room_id, new_title):
 
     # 수정 완료된 room 반환
     return room
+
+# 5. 채팅방 삭제 함수
+def delete_room(db, room_id):
+    
+    # room 조회
+    room = db.query(StudyRoom).filter(
+        StudyRoom.id == room_id
+    ).first()
+
+    # room 없으면 종료
+    if not room:
+        return None
+
+    db.delete(room)
+    db.commit()
+
+    return True

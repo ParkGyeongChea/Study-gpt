@@ -19,11 +19,12 @@ import SettingsModal from "./SettingsModal";
 import { useNavigate } from "react-router-dom";
 
 
-// RoomList 컴포넌트
+// RoomList 컴포넌트 props
 export default function RoomList({
   setSelectedRoom,
   setMessages,
   setIsSidebarOpen,
+  selectedRoom,
   isSidebarOpen,
   roomRefreshTrigger
 
@@ -33,6 +34,11 @@ export default function RoomList({
 
   const [showSidebarContent, setShowSidebarContent] = useState(isSidebarOpen);
 
+  //현재 우클릭 메뉴 상태 저장
+  const [contextMenu, setContextMenu] = useState(null);
+
+  //삭제 확인창 열려있는 room_id (삭제 버튼 클릭시 확인창 표시)
+  const [deleteRoomId, setDeleteRoomId] = useState(null);
   //프로필 메뉴 state추가
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
@@ -44,6 +50,10 @@ export default function RoomList({
 
   //프로필 메뉴 화면 아무군데나 클릭 시 닫힐 수 있게 함
   const profileMenuRef = useRef(null);
+
+  //우클릭 메뉴 DOM 기억하는 ref
+  const contextMenuRef = useRef(null);
+  
 
   useEffect(() => {
     if (isSidebarOpen) {
@@ -72,8 +82,16 @@ export default function RoomList({
       profileMenuRef.current &&
       !profileMenuRef.current.contains(e.target)
     ) {
-      setIsProfileMenuOpen(false);
+      setIsProfileMenuOpen(false); //프로필 메뉴 닫기
     }
+
+    if (
+    contextMenuRef.current &&
+    !contextMenuRef.current.contains(e.target) //클릭한 위치가 우클릭 메뉴 내부인지 검사
+  ) {
+    setContextMenu(null);
+  }
+    
   };
 
   window.addEventListener("keydown", handleEsc);
@@ -206,23 +224,65 @@ export default function RoomList({
                 setMessages([]);
 
               }}
+              //우클릭 감지 이벤트
+              onContextMenu={(e) => {
+              //기본 브라우저 우클릭 메뉴 제거
+              e.preventDefault();
+                //마우스 현재 위치 저장, 어떤 채팅방 우클릭했는지 저장
+              setContextMenu({
+                x: e.clientX,
+                y: e.clientY,
+                roomId: room.id
+              });
 
-              className="
-                p-3 border-b
+            }}
+
+              className={`
+                p-3
                 border-gray-300
                 dark:border-zinc-800
-
                 cursor-pointer
-
-                hover:bg-gray-200
-                dark:hover:bg-zinc-800
-
+                transition-all duration-200
                 text-black
                 dark:text-white
-              "
+                ${
+                  //선택된 채팅방은 다른 스타일로 변경,
+                  //현재 선택된 room의 id와 지금 map 돌고 있는 room id 가 같은지 검사
+                  selectedRoom?.id === room.id //같으면,
+                    ? `
+                      bg-gray-300
+                      dark:bg-zinc-800
+                      border-l-4
+                      rounded-xl
+                      border-blue-500
+                      font-semibold
+                    `
+                    : ` 
+          
+                      hover:bg-gray-200 
+                      dark:hover:bg-zinc-900
+                      hover:rounded-xl
+                    `
+                }
+              `}
             >
 
-              {room.title}
+              <div className="flex items-center gap-3">
+                {selectedRoom?.id === room.id && (
+                  <div
+                    className="
+                      w-1
+                      h-6
+                      rounded-full
+                      bg-blue-500
+                    "
+                  />
+                )}
+                <span>
+                  {room.title}
+                </span>
+
+              </div>
 
             </div>
 
@@ -282,13 +342,10 @@ export default function RoomList({
               left-[-15px]
               top-1/2
               -translate-y-1/2
-
               w-10 h-10
               rounded-full
               bg-blue-500
-
               flex items-center justify-center
-
               text-white
               font-bold
             "
@@ -304,9 +361,7 @@ export default function RoomList({
               left-14
               top-1/2
               -translate-y-1/2
-
               flex flex-col
-
               transition-opacity duration-150
 
               ${isSidebarOpen && showSidebarContent
@@ -330,17 +385,12 @@ export default function RoomList({
                 absolute
                 bottom-14
                 left-0
-
                 w-52
-
                 bg-zinc-900
                 border border-zinc-700
-
                 rounded-2xl
                 shadow-xl
-
                 p-2
-
                 z-50
               "
             >
@@ -353,13 +403,10 @@ export default function RoomList({
                 className="
                   w-full
                   text-left
-
                   px-4 py-3
                   rounded-xl
-
                   hover:bg-zinc-800
                   transition
-
                   text-white
                 "
               >
@@ -372,13 +419,10 @@ export default function RoomList({
                 className="
                   w-full
                   text-left
-
                   px-4 py-3
                   rounded-xl
-
                   hover:bg-zinc-800
                   transition
-
                   text-red-400
                 "
               >
@@ -399,7 +443,6 @@ export default function RoomList({
                 top-1/2
                 -translate-x-1/2
                 -translate-y-1/2
-
                 transition-opacity duration-150
 
                 ${isSidebarOpen
@@ -437,11 +480,8 @@ export default function RoomList({
                 absolute
                 left-0
                 top-0
-
                 w-full
-
                 flex flex-col gap-2
-
                 transition-opacity duration-150
 
                 ${isSidebarOpen && showSidebarContent
@@ -455,12 +495,9 @@ export default function RoomList({
                   w-full
                   bg-zinc-800
                   hover:bg-zinc-700
-
                   text-white
-
                   p-2
                   rounded-lg
-
                   transition
                 "
               >
@@ -473,12 +510,9 @@ export default function RoomList({
                   w-full
                   bg-white
                   hover:bg-gray-200
-
                   text-black
-
                   p-2
                   rounded-lg
-
                   transition
                 "
               >
@@ -488,7 +522,187 @@ export default function RoomList({
           </div>
         )}
       </div>
+    {/* 우클릭 메뉴 ,우클릭 시에만 메뉴 표시*/}
+    {contextMenu && (
+      <div
+        //이 div 기억하라는 뜻, 리액트가 현재 우클릭 메뉴 DOM 기억할수 있게
+        ref={contextMenuRef}
 
+        //우클릭한 마우스 위치에 메뉴 띄움
+        style={{
+          top: contextMenu.y,
+          left: contextMenu.x
+        }}
+
+        className="
+          fixed
+          z-50
+          w-40
+          bg-zinc-900
+          border border-zinc-700
+          rounded-xl
+          shadow-xl
+
+          p-2
+        "
+      >
+
+        {/* 보관 버튼 */}
+        <button
+          className="
+            w-full
+            text-left
+            px-4 py-2
+            rounded-lg
+            hover:bg-zinc-800
+            transition
+            text-white
+          "
+        >
+          채팅방 이동
+        </button>
+
+        {/* 삭제 버튼 */}
+        <button
+          onClick={() => {
+            setDeleteRoomId(contextMenu.roomId); //삭제 확인창 열기
+            setContextMenu(null); //우클릭 메뉴 닫기
+          }}
+          className="
+            w-full
+            text-left
+            px-4 py-2
+            rounded-lg
+            hover:bg-zinc-800
+            transition
+            text-red-400
+          "
+        >
+          삭제
+        </button>
+        
+
+      </div>
+
+    )}
+    {/* 삭제 확인 모달 */}
+    {deleteRoomId && (
+      <div
+        className="
+          fixed inset-0
+          z-50
+
+          bg-black/60
+
+          flex
+          items-center
+          justify-center
+        "
+      >
+
+        {/* 모달 박스 */}
+        <div
+          className="
+            w-[420px]
+            bg-zinc-900
+            rounded-2xl
+            p-6
+            border border-zinc-800
+          "
+        >
+
+          {/* 제목 */}
+          <h2
+            className="
+              text-2xl
+              font-bold
+              text-white
+            "
+          >
+            채팅방을 삭제하시겠습니까?
+          </h2>
+
+          {/* 설명 */}
+          <p
+            className="
+              mt-4
+              text-zinc-300
+              leading-7
+            "
+          >
+            이 채팅방과 저장된 메시지가 삭제됩니다.
+          </p>
+
+          {/* 버튼 영역 */}
+          <div
+            className="
+              flex
+              justify-end
+              gap-3
+              mt-8
+            "
+          >
+
+            {/* 취소 버튼 */}
+            <button
+
+              onClick={() => {
+                setDeleteRoomId(null);
+              }}
+
+              className="
+                px-5 py-2
+                rounded-xl
+                bg-zinc-800
+                hover:bg-zinc-700
+                text-white
+                transition
+              "
+            >
+              취소
+            </button>
+
+            {/* 삭제 버튼 */}
+            <button
+              onClick={async () => {
+                try {
+                  await api.delete(
+                    `/rooms/${deleteRoomId}`
+                  );
+                  fetchRooms();
+
+                  if (selectedRoom?.id === deleteRoomId) {
+                    setSelectedRoom(null);
+                    setMessages([]);
+                  }
+
+                  setDeleteRoomId(null);
+
+                } catch (error) {
+                  console.log(error);
+                }
+
+              }}
+
+              className="
+                px-5 py-2
+                rounded-xl
+                bg-red-500
+                hover:bg-red-600
+                text-white
+                transition
+              "
+            >
+              삭제
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    )}
     {/* 설정창 */}
     {isSettingsModalOpen && (
       <SettingsModal

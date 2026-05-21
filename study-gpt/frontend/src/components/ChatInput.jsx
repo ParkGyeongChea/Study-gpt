@@ -76,6 +76,7 @@ export default function ChatInput({
     // 기존 메시지 배열 뒤에 추가
     setMessages((prev) => [...prev, tempMessage]);
 
+
     // 현재 room 임시 저장
     let currentRoom = selectedRoom;
 
@@ -110,6 +111,11 @@ export default function ChatInput({
     //=====================================
 
     setIsLoading(true);
+
+    // 사용자 메시지 전송 즉시 room 목록 새로고침
+    if (currentRoom?.id) {
+      setRoomRefreshTrigger((prev) => prev + 1);
+    }
 
 
     // 임시 AI 로딩 메시지
@@ -228,10 +234,20 @@ export default function ChatInput({
         {/* 실제 메시지 입력창 */}
         <textarea //여러 줄 입력 기능
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          //메시지 창 크기 메시지에 따라 위로 크기 증가, 및 스크롤 추가
+          onChange={(e) => {
+            setMessage(e.target.value); 
+            
+            // 높이 초기화
+            e.target.style.height = "auto";
+
+            // 최대 높이 제한
+            e.target.style.height =
+              Math.min(e.target.scrollHeight, 220) + "px";
+          }}
           placeholder="무엇을 배우고 싶나요?"
 
-          // Enter 전송 / Shift+Enter 줄바꿈
+          // Enter 전송 / Shift+Enter 줄바꿈 
           onKeyDown={async (e) => {
 
             if (e.key === "Enter" && !e.shiftKey) {
@@ -248,6 +264,8 @@ export default function ChatInput({
             bg-transparent
             outline-none
             resize-none
+            overflow-y-auto
+            max-h-[220px]
 
             text-black
             dark:text-white
