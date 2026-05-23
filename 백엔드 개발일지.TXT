@@ -245,6 +245,35 @@ npm install lucide-react 추가,(복사, 복사 완료 체크 아이콘)
 코드블럭 언어 표시
 홈 화면-> 채팅방 첫 진입시 애니메이션
 AI 메시지 fade-in 애니메이션
+===============================
+5.22~24
+채팅방 이름 변경 기능 추가
+
+채팅방 이동(현재학습,아카이브 이동) 탭추가.
+아카이브(이전 완료 학습, 복습하기 쉽게 트리형 구조로 변경)
+
+study_rooms 새 테이블 추가 = 현재 학습/아카이브 채팅탭 구분
+(sql table 명령어)
+ALTER TABLE study_rooms
+ADD COLUMN is_archived BOOLEAN DEFAULT FALSE; 
+
+아카이브 채팅탭 트리형 구조 적용
+
+DB 테이블에 parent_room_id 컬럼 추가
+(ALTER TABLE study_rooms ADD COLUMN parent_room_id INTEGER REFERENCES study_rooms(id);)
+
+채팅방 부모 변경 API 추가.
+
+파이썬
+ ㄴ 파이썬의 기본 개념
+    ㄴ if문이란
+
+이라는 구조 저장 가능하게 적용 , 전체 재귀 구조 추가
+
+비 로그인시, 채팅탭 보이지 않게(현재 학습/학습 아카이브)
+
+사이드챗 연결
+
 
 
 

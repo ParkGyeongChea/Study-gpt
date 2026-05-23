@@ -21,6 +21,9 @@ import { useNavigate } from "react-router-dom";
 export default function ChatPage() {
 
   const navigate = useNavigate();
+  
+  // 현재 로그인 토큰 가져오기
+  const token = localStorage.getItem("token");
 
   // 현재 선택된 room 저장 state
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -30,6 +33,25 @@ export default function ChatPage() {
 
   // 현재 room의 메시지 저장 state
   const [messages, setMessages] = useState([]);
+
+  // 사이드챗 메시지 저장 state
+  const [sideMessages, setSideMessages] = useState(() => {
+
+    // 브라우저에 저장된 sidechat 기록 불러오기
+    const savedMessages = localStorage.getItem("sideMessages");
+
+    // 저장 데이터 있으면 JSON 변환
+    return savedMessages
+      ? JSON.parse(savedMessages)
+      : [];
+
+  });
+
+  // 사이드챗 입력창 state
+  const [sideInput, setSideInput] = useState("");
+
+  // 사이드챗 로딩 상태
+  const [isSideLoading, setIsSideLoading] = useState(false);
 
   // AI 응답 로딩 상태
   const [isLoading, setIsLoading] = useState(false);
@@ -75,6 +97,16 @@ export default function ChatPage() {
     setShowSideChatContent(false);
 
   }, [isSideChatOpen]);
+
+  // sideMessages 변경 시 localStorage 자동 저장
+  useEffect(() => {
+
+    localStorage.setItem(
+      "sideMessages",
+      JSON.stringify(sideMessages)
+    );
+
+  }, [sideMessages]);
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black">
@@ -245,8 +277,8 @@ export default function ChatPage() {
                   ${selectedRoom
                     ? (
                         isSideChatOpen
-                          ? "w-72 p-4 border-l-4 border-gray-300 dark:border-zinc-800"
-                          : "w-0 p-0 border-l-0"
+                          ? "w-72 border-l-4 border-gray-300 dark:border-zinc-800"
+                          : "w-0 border-l-0"
                       )
                     : "w-0 p-0 border-l-0"
                   }
@@ -255,11 +287,11 @@ export default function ChatPage() {
 
                 <div
                   className={`
-                    absolute
-                    top-0 left-0
-
-                    w-72
+                    h-full
                     p-4
+
+                    flex
+                    flex-col
 
                     transition-opacity duration-150
 
@@ -269,18 +301,53 @@ export default function ChatPage() {
                   `}
                 >
 
-                  <h2
+                  <div
                     className="
-                      text-xl
-                      font-bold
-                      text-black
-                      dark:text-white
+                      flex
+                      items-center
+                      justify-between
                       mb-4
-                      pl-[88px]
                     "
                   >
-                    Side Chat
-                  </h2>
+
+                    <h2
+                      className="
+                        flex-1
+                        text-center
+                        pl-[25px]
+                        text-xl
+                        font-bold
+                        text-black
+                        dark:text-white
+                      "
+                    >
+                      Side Chat
+                    </h2>
+
+                    <button
+                      onClick={() => {
+
+                        // 사이드챗 메시지 초기화
+                        setSideMessages([]);
+
+                        // localStorage 데이터 제거
+                        localStorage.removeItem("sideMessages");
+
+                      }}
+
+                      className="
+                        text-sm
+                        font-semibold
+                        text-gray-400
+                        hover:text-white
+                        transition
+                        -translate-x-[8px]
+                      "
+                    >
+                      Clear
+                    </button>
+
+                  </div>
 
                   <div
                     className="
@@ -291,6 +358,172 @@ export default function ChatPage() {
                     학습 중 궁금한 내용을 빠르게
                     <br />
                     질문할 수 있습니다.
+                  </div>
+                  {/* 사이드챗 메시지 출력 영역 */}
+                  <div
+                    className="
+                      mt-6
+                      flex-1
+                      overflow-y-auto
+
+                      flex
+                      flex-col
+                      gap-3
+
+                      pr-1
+                    "
+                  >
+                    {/* sideMessages 안에 들어있는 메시지들을 하나씩 화면에 출력 */}
+                    {sideMessages.map((msg, index) => (
+                      <div
+                        key={index}
+                        className={`
+                          p-3
+                          rounded-2xl
+                          text-sm
+                          whitespace-pre-wrap
+                          ${
+                            //이 메시지가 사용자 메시지인지 검사하는 코드
+                            msg.role === "user"
+                              ? `
+                                bg-blue-500
+                                text-white
+                                self-end
+                              `
+                              : `
+                                bg-zinc-800
+                                text-white
+                                self-start
+                              `
+                          }
+                        `}
+                      >
+                        {msg.content}
+                      </div>
+                    ))}
+
+                  </div>
+                  {/* 사이드챗 입력 영역 */}
+                  <div
+                    className="
+                    mt-auto
+                    pt-4
+                    pb-2
+                    w-full
+                    flex
+                    items-center
+                    gap-2"
+                  >
+                    <input
+                      type="text"
+                      value={sideInput}
+                      //사용자가 입력할 때마다 sideInput state 업데이트
+                      onChange={(e) => {
+                        setSideInput(e.target.value);
+                      }}
+                      onKeyDown={(e) => {
+
+                      // Enter 입력 시 전송 버튼 클릭
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        document.getElementById("side-chat-send-btn")?.click();
+                      }
+                    }}
+
+                      placeholder="질문해보세요..."
+
+                      className="
+                        flex-1
+                        min-w-0
+                        rounded-xl
+                        bg-zinc-900
+                        border border-zinc-700
+                        px-4
+                        py-3
+                        text-white
+                        outline-none
+                      "
+                    />
+
+                    <button
+
+                      id="side-chat-send-btn"
+                      onClick={async () => {
+
+                        // 빈 입력 방지
+                        if (!sideInput.trim()) return;
+                        // 사용자 메시지 저장
+                        const userMessage = {
+                          role: "user",
+                          content: sideInput
+                        };
+
+                        // 화면에 사용자 메시지 먼저 추가
+                        setSideMessages((prev) => [
+                          ...prev,
+                          userMessage
+                        ]);
+
+                        // 입력창 비우기
+                        setSideInput("");
+
+                        // 로딩 시작
+                        setIsSideLoading(true);
+
+                        try {
+                          // 백엔드 side-chat API 요청
+                          const response = await fetch(
+                            "http://localhost:8000/side-chat",
+                            {
+                              method: "POST",
+
+                              headers: {
+                                "Content-Type": "application/json"
+                              },
+
+                              body: JSON.stringify({
+                                message: userMessage.content
+                              })
+                            }
+                          );
+                          // JSON 응답 변환
+                          const data = await response.json();
+
+                          // AI 메시지 저장
+                          const aiMessage = {
+                            role: "assistant",
+                            content: data.message
+                          };
+
+                          // 화면에 AI 응답 추가
+                          setSideMessages((prev) => [
+                            ...prev,
+                            aiMessage
+                          ]);
+
+                        } catch (error) {
+                          console.error("사이드챗 오류:", error);
+                        } finally {
+
+                          // 로딩 종료
+                          setIsSideLoading(false);
+                        }
+
+                      }}
+                      className="
+                        h-[52px]
+                        w-[56px]
+                        shrink-0
+                        rounded-xl
+                        bg-blue-500
+                        text-white
+                        hover:bg-blue-600
+                        transition
+                      "
+                    >
+                      전송
+                    </button>
+
                   </div>
 
                 </div>

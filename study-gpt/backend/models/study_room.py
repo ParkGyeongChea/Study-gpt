@@ -5,7 +5,8 @@
 
 #쉽게 말하면 여러 개의 채팅창 목록을 만드는 것
 
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
+#Boolean = True/False 저장 타입
 
 from sqlalchemy.orm import relationship # relationship 테이블끼리 관계를 연결하기 위해 가져오는 코드
 
@@ -30,6 +31,16 @@ class StudyRoom(Base):
     
     #채팅방 제목을 저장하는 코드
     title = Column(String)
+    
+    # 부모 채팅방 id 저장 (하위 학습 구조용)
+    parent_room_id = Column(
+        Integer,
+        ForeignKey("study_rooms.id"),
+        nullable=True #부모 없어도 허용, 최상위(파이썬이란) 하위(if문~) 
+    )
+    
+    # 현재 진행 학습인지, 학습 아카이브인지 저장
+    is_archived = Column(Boolean, default=False)
     
     #채팅방이 만들어진 시간을 저장하는 코드
     created_at = Column(DateTime, default=datetime.utcnow)

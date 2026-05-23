@@ -43,7 +43,7 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
         new_title = generate_room_title(message)
         
         #실제 DB room 제목 수정
-        update_room_title(db, room_id, new_title)
+        update_room_title(db, room_id, user_id, new_title)
     #==========================================
     
     

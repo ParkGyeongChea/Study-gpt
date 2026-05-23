@@ -136,6 +136,419 @@ export default function RoomList({
   // 채팅방 목록 저장 state
   const [rooms, setRooms] = useState([]);
 
+  // 현재 이름 수정중인 room id
+  const [editingRoomId, setEditingRoomId] = useState(null);
+  //editingRoomId = 현재 어떤 채팅방을 수정중인지 기억
+  //setEditingRoomId = 사용자가 입력중인 새 제목
+
+  // 수정 input 값 저장
+  const [editTitle, setEditTitle] = useState("");
+
+  // 학습 아카이브 펼침 상태
+  const [showArchive, setShowArchive] = useState(true);
+
+  // room 펼침/접힘 상태 저장
+  const [expandedRooms, setExpandedRooms] = useState({});
+
+  // 현재 드래그중인 room 저장
+  const [draggedRoomId, setDraggedRoomId] = useState(null);
+
+  // 현재 hover 중인 room 저장
+  const [hoveredRoomId, setHoveredRoomId] = useState(null);
+
+  // 현재 진행중인 학습 room만 분리
+  const activeRooms = rooms.filter(
+    (room) => room.is_archived === false
+  );
+
+  // 최상위 room만 추출
+  const rootRooms = activeRooms.filter(
+    (room) => room.parent_room_id === null
+  );
+
+  // 특정 room의 자식 room 찾기
+  const getChildRooms = (parentId) => {
+
+    return activeRooms.filter(
+      (room) => room.parent_room_id === parentId
+    );
+
+  };
+
+  // 특정 room의 모든 하위 자식 검사 함수
+  const isChildRoom = (parentId, targetId) => {
+
+    // 현재 parent의 자식들 찾기
+    const children = rooms.filter(
+      (room) => room.parent_room_id === parentId
+    );
+
+    // 자식 room 반복 검사
+    for (const child of children) {
+
+      // 현재 자식이 target이면 true
+      if (child.id === targetId) {
+        return true;
+      }
+
+      // 자식의 자식 재귀 검사
+      if (isChildRoom(child.id, targetId)) {
+        return true;
+      }
+
+    }
+
+    return false;
+
+  };
+
+  // room 펼치기/접기 토글 함수
+  const toggleRoomExpand = (roomId) => {
+
+    setExpandedRooms((prev) => ({
+
+      ...prev,
+
+      [roomId]: !prev[roomId]
+
+    }));
+
+  };
+
+  // 재귀 room 렌더링 함수
+  const renderRoom = (room, depth = 0) => {
+
+    return (
+
+      <div key={room.id}>
+
+        {/* 현재 room */}
+        <div
+          draggable // 이 요소 드래그 가능
+          onDragStart={() => { //드래그 시작 순간 실행
+            setDraggedRoomId(room.id); //드래그 중인 room id 기억
+          }}
+
+          onDragEnd={() => {
+            setHoveredRoomId(null);
+            setDraggedRoomId(null);
+          }}
+          //마우스가 어떤 room 위에 올라갔는지 기억
+          onDragOver={(e) => {
+            e.preventDefault();
+
+            // 현재 hover 중인 room 저장
+            setHoveredRoomId(room.id);
+
+          }}
+          onDrop={async () => {
+
+            // 자기 자신에게 drop 방지
+            if (draggedRoomId === room.id) {
+              return;
+            }
+
+            // 자기 자신의 자식 아래 drop 방지
+            if (isChildRoom(draggedRoomId, room.id)) {
+              return;
+            }
+
+            try {
+              await api.put(
+                `/rooms/${draggedRoomId}/parent`,
+                {
+                  parent_room_id: room.id //드래그한 room을 현재 room 아래 소속시킴
+                }
+              );
+              // room 목록 새로고침
+              fetchRooms();
+              // hover 상태 초기화
+              setHoveredRoomId(null);
+
+              // drag 상태 초기화
+              setDraggedRoomId(null);
+
+            } catch (error) {
+              console.log(error);
+            }
+          }}
+          onClick={() => {
+            setSelectedRoom(room);
+            setMessages([]);
+          }}
+
+          onContextMenu={(e) => {
+
+            e.preventDefault();
+
+            setContextMenu({
+              x: e.clientX,
+              y: e.clientY,
+              roomId: room.id,
+              isArchived: room.is_archived
+            });
+
+          }}
+
+          className={`
+            ${depth === 0 ? "mt-2 p-3" : "mt-1 py-1 px-2"}
+
+            cursor-pointer
+            transition-all duration-200
+            text-black
+            dark:text-white
+
+            
+            ${
+              selectedRoom?.id === room.id
+                ? `
+                  bg-gray-300
+                  dark:bg-zinc-800
+                  rounded-xl
+                  font-semibold
+                `
+                : `
+                  hover:bg-gray-200
+                  dark:hover:bg-zinc-900
+                  hover:rounded-xl
+                `
+            }
+          `}
+
+          style={{
+            marginLeft: `${depth * 24}px`
+          }}
+        >
+
+          <div className="flex items-center gap-3">
+
+            {selectedRoom?.id === room.id && (
+
+              <div
+                className="
+                  w-1
+                  h-6
+                  rounded-full
+                  bg-blue-500
+                "
+              />
+
+            )}
+              {/* 자식 room 존재 시 펼치기 버튼 */}
+              {getChildRooms(room.id).length > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); //버튼 클릭 이벤트만 실행
+                    toggleRoomExpand(room.id);
+                  }}
+                  className="
+                    text-xs
+                    text-zinc-400
+                    hover:text-white
+                    transition
+                  "
+                >
+                  {expandedRooms[room.id] ? "▼" : "▶"}
+                </button>
+              )}
+            <span>
+              {depth > 0 && "└ "}
+              {room.title}
+            </span>
+          </div>
+        </div>
+        {/* 현재 hover 중인 room insertion line */}
+        {
+          hoveredRoomId === room.id &&
+          draggedRoomId &&
+          draggedRoomId !== room.id && (
+
+          <div
+            className="
+              h-[2px]
+              bg-blue-500
+              rounded-full
+              ml-6
+              mr-2
+              opacity-80
+            "
+          />
+
+        )}
+
+        {/* 펼쳐진 room만 자식 출력 */}
+        {expandedRooms[room.id] && (
+          getChildRooms(room.id).map((childRoom) => (
+            renderRoom(childRoom, depth + 1)
+          ))
+        )}
+      </div>
+    );
+  };
+
+  // 학습 아카이브 room만 분리
+  const archivedRooms = rooms.filter(
+    (room) => room.is_archived === true
+  );
+
+  // 아카이브 최상위 room만 추출
+  const archivedRootRooms = archivedRooms.filter(
+    (room) => room.parent_room_id === null
+  );
+
+  // 특정 아카이브 room의 자식 room 찾기
+  const getArchivedChildRooms = (parentId) => {
+
+    return archivedRooms.filter(
+      (room) => room.parent_room_id === parentId
+    );
+
+  };
+  // 아카이브 room 재귀 렌더링 함수
+  const renderArchivedRoom = (room, depth = 0) => {
+    return (
+      <div key={room.id}>
+
+        <div
+          draggable
+
+          onDragStart={() => {
+            setDraggedRoomId(room.id);
+          }}
+
+          onDragEnd={() => {
+            setHoveredRoomId(null);
+            setDraggedRoomId(null);
+          }}
+
+          onDragOver={(e) => {
+            e.preventDefault();
+            setHoveredRoomId(room.id);
+          }}
+
+          onDrop={async () => {
+            if (draggedRoomId === room.id) {
+              return;
+            }
+
+            if (isChildRoom(draggedRoomId, room.id)) {
+              return;
+            }
+
+            try {
+              await api.put(
+                `/rooms/${draggedRoomId}/parent`,
+                {
+                  parent_room_id: room.id
+                }
+              );
+
+              fetchRooms();
+
+              setHoveredRoomId(null);
+              setDraggedRoomId(null);
+
+            } catch (error) {
+              console.log(error);
+            }
+          }}
+
+          onClick={() => {
+            setSelectedRoom(room);
+            setMessages([]);
+          }}
+
+          onContextMenu={(e) => {
+            e.preventDefault();
+
+            setContextMenu({
+              x: e.clientX,
+              y: e.clientY,
+              roomId: room.id,
+              isArchived: room.is_archived
+            });
+          }}
+
+          className={`
+            ${depth === 0 ? "mt-2 p-3" : "mt-1 py-1 px-2"}
+
+            cursor-pointer
+            transition-all duration-200
+            text-black
+            dark:text-white
+
+            ${
+              selectedRoom?.id === room.id
+                ? `
+                  bg-gray-300
+                  dark:bg-zinc-800
+                  rounded-xl
+                  font-semibold
+                `
+                : `
+                  hover:bg-gray-200
+                  dark:hover:bg-zinc-900
+                  hover:rounded-xl
+                `
+            }
+          `}
+
+          style={{
+            marginLeft: `${depth * 24}px`
+          }}
+        >
+          <div className="flex items-center gap-3">
+
+            {getArchivedChildRooms(room.id).length > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleRoomExpand(room.id);
+                }}
+                className="
+                  text-xs
+                  text-zinc-400
+                  hover:text-white
+                  transition
+                "
+              >
+                {expandedRooms[room.id] ? "▼" : "▶"}
+              </button>
+            )}
+
+            <span>
+              {depth > 0 && "└ "}
+              {room.title}
+            </span>
+
+          </div>
+        </div>
+
+        {hoveredRoomId === room.id &&
+          draggedRoomId &&
+          draggedRoomId !== room.id && (
+            <div
+              className="
+                h-[2px]
+                bg-blue-500
+                rounded-full
+                ml-6
+                mr-2
+                opacity-80
+              "
+            />
+        )}
+
+        {expandedRooms[room.id] && (
+          getArchivedChildRooms(room.id).map((childRoom) => (
+            renderArchivedRoom(childRoom, depth + 1)
+          ))
+        )}
+
+      </div>
+    );
+  };
+  
   // 화면 시작 시 자동 실행
   useEffect(() => {
     const token = getToken();
@@ -209,91 +622,197 @@ export default function RoomList({
 
       {showSidebarContent ? (
 
-        <div className="flex-1 overflow-y-auto">
+        isLoggedIn && (
 
-          {rooms.map((room) => (
+          <div className="flex-1 overflow-y-auto">
+
+          {/* 현재 학습 섹션 */}
+          <div
+            className={`
+              mb-6
+              min-h-[220px]
+              pb-12
+              rounded-2xl
+              transition-all duration-200
+            `}
+
+            onDragOver={(e) => {
+              e.preventDefault();
+            }}
+            onDrop={async () => {
+
+              // 드래그 room 없으면 종료
+              if (!draggedRoomId) {
+                return;
+              }
+              try {
+
+              // 현재 드래그 room 찾기
+              const draggedRoom = rooms.find(
+                (room) => room.id === draggedRoomId
+              );
+
+              // archive 상태면 active로 복귀
+              if (draggedRoom?.is_archived) {
+
+                await api.put(
+                  `/rooms/${draggedRoomId}/archive`
+                );
+
+              }
+
+              // 최상위 room으로 변경
+              await api.put(
+                `/rooms/${draggedRoomId}/parent`,
+                {
+                  parent_room_id: null
+                }
+              );
+
+              // room 목록 다시 조회
+              fetchRooms();
+
+            } catch (error) {
+
+              console.log(error);
+
+            }
+            }}
+          >
 
             <div
-              key={room.id}
+              className="
+                flex items-center
+                gap-2
+                text-base
+                font-extrabold
+                text-zinc-50
+                mb-4
+                px-2
+                tracking-wide
+              "
+            >
+              <span className="text-lg">
+                📝
+              </span>
 
-              onClick={() => {
+              현재 학습
+            </div>
+            {/* 재귀 렌더링 시작점  */}
+            {rootRooms.map((room) => (
 
-                setSelectedRoom(room);
+              renderRoom(room)
 
-                // 이전 메시지 초기화
-                setMessages([]);
+            ))}
+          </div>
+          {/* 현재 학습 / 아카이브 구분선 */}
+          <div
+            className="
+              border-t-2
+              border-zinc-700
+              my-6
+            "
+          />
 
-              }}
-              //우클릭 감지 이벤트
-              onContextMenu={(e) => {
-              //기본 브라우저 우클릭 메뉴 제거
+          {/* 학습 아카이브 섹션 */}
+          <div
+            className={`
+              mt-8
+              min-h-[220px]
+              pb-12
+              rounded-2xl
+              transition-all duration-200
+            `}
+            onDragOver={(e) => {
               e.preventDefault();
-                //마우스 현재 위치 저장, 어떤 채팅방 우클릭했는지 저장
-              setContextMenu({
-                x: e.clientX,
-                y: e.clientY,
-                roomId: room.id
-              });
+            }}
+            //onDrop 으로 아카이브 영역 자체가 Drop zone 으로 변경됨
+            onDrop={async () => {
+
+              // 드래그 room 없으면 종료
+              if (!draggedRoomId) {
+                return;
+              }
+
+              // 현재 드래그중인 room 찾기
+              const draggedRoom = rooms.find(
+                (room) => room.id === draggedRoomId
+              );
+
+              // 이미 archive 상태면 종료
+              if (draggedRoom?.is_archived) {
+                return;
+              }
+
+              try {
+                // archive 이동 요청
+                await api.put(
+                  `/rooms/${draggedRoomId}/archive`
+                );
+
+                // room 목록 다시 조회
+                fetchRooms();
+
+              } catch (error) {
+
+                console.log(error);
+
+              }
 
             }}
-
-              className={`
-                p-3
-                border-gray-300
-                dark:border-zinc-800
+          >
+            <div
+              onClick={() => {
+                setShowArchive(!showArchive);
+              }}
+              className="
+                flex items-center
+                justify-between
                 cursor-pointer
-                transition-all duration-200
-                text-black
-                dark:text-white
-                ${
-                  //선택된 채팅방은 다른 스타일로 변경,
-                  //현재 선택된 room의 id와 지금 map 돌고 있는 room id 가 같은지 검사
-                  selectedRoom?.id === room.id //같으면,
-                    ? `
-                      bg-gray-300
-                      dark:bg-zinc-800
-                      border-l-4
-                      rounded-xl
-                      border-blue-500
-                      font-semibold
-                    `
-                    : ` 
-          
-                      hover:bg-gray-200 
-                      dark:hover:bg-zinc-900
-                      hover:rounded-xl
-                    `
-                }
-              `}
+                text-base
+                font-extrabold
+                text-zinc-50
+                mb-4
+                px-2
+                tracking-wide
+                hover:opacity-80
+                transition
+              "
             >
-
-              <div className="flex items-center gap-3">
-                {selectedRoom?.id === room.id && (
-                  <div
-                    className="
-                      w-1
-                      h-6
-                      rounded-full
-                      bg-blue-500
-                    "
-                  />
-                )}
-                <span>
-                  {room.title}
+              <div className="flex items-center gap-2">
+                <span className="text-lg">
+                  📁
                 </span>
-
+                학습 아카이브
               </div>
-
+              <span className="text-sm text-zinc-400">
+                {showArchive ? "▼" : "▶"}
+              </span>
             </div>
+              {showArchive && (
+                <div
+                  className="
+                    mt-3
+                  "
+                >
+                
+                {[...archivedRootRooms]
+                  .reverse()
+                  .map((room) => (
 
-          ))}
+                    renderArchivedRoom(room)
 
+                ))}
+            </div>
+          )}
+          </div>
         </div>
-
+        )
       ) : (
 
         // 사이드바 닫혔을 때 공간 유지
         <div className="flex-1" />
+      
 
       )}
 
@@ -433,6 +952,7 @@ export default function RoomList({
             </div>
           )}
           </div>
+          
         ) : (
           <div className="relative h-20 w-full -mt-2">
             {/* 접힌 상태 아이콘 */}
@@ -547,8 +1067,34 @@ export default function RoomList({
         "
       >
 
-        {/* 보관 버튼 */}
+        {/* 채팅방 이동 버튼 */}
         <button
+          onClick={async () => {
+
+            try {
+
+              // 현재 상태 반대로 변경
+              await api.put(
+                `/rooms/${contextMenu.roomId}/archive`,
+                {
+                  is_archived: !contextMenu.isArchived
+                }
+              );
+
+              // room 목록 다시 조회
+              fetchRooms();
+
+              // 우클릭 메뉴 닫기
+              setContextMenu(null);
+
+            } catch (error) {
+
+              console.log(error);
+
+            }
+
+          }}
+
           className="
             w-full
             text-left
@@ -559,7 +1105,39 @@ export default function RoomList({
             text-white
           "
         >
-          채팅방 이동
+          {contextMenu.isArchived
+            ? "현재 학습으로 이동"
+            : "아카이브 이동"}
+        </button>
+        {/* 이름 변경 버튼 */}
+        <button
+          onClick={() => {
+
+            // 현재 이 room 수정 시작 상태 저장
+            setEditingRoomId(contextMenu.roomId);
+
+            // 기존 제목 input에 미리 넣기, 현재 수정하려는 room 객체 찾기
+            const targetRoom = rooms.find(
+              (room) => room.id === contextMenu.roomId
+            );
+
+            setEditTitle(targetRoom.title);
+
+            // 우클릭 메뉴 닫기
+            setContextMenu(null);
+          }}
+
+          className="
+            w-full
+            text-left
+            px-4 py-2
+            rounded-lg
+            hover:bg-zinc-800
+            transition
+            text-white
+          "
+        >
+          이름 변경
         </button>
 
         {/* 삭제 버튼 */}

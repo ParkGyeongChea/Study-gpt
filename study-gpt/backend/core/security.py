@@ -17,7 +17,7 @@ from datetime import datetime, timedelta #datetime 라이브러리에서 현재 
 
 SECRET_KEY = "study-gpt-secret-key" #나중에 env로 뺄 예정
 ALGORITHM = "HS256" #jwt 암호화 방식
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 #토큰 만료 시간, 60분
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30 #토큰(로그인 시간) 만료 시간 30일
 
 pwd_context = CryptContext(
     #bcrypt 암호화 설정 생성
@@ -70,8 +70,6 @@ def create_access_token(user_id: int):
 
 # 4.JWT 안에서 user_id를 추출하는 함수 생성
 def get_user_id_from_token(token: str):
-    
-   
     
     try:
         

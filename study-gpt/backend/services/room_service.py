@@ -66,28 +66,28 @@ def generate_room_title(message: str):
     
     return title
 
-# 4. 채팅방 제목을 실제 DB에 저장하는 제목 수정 함수
-def update_room_title(db, room_id, new_title):
+# # 4. 채팅방 제목을 실제 DB에 저장하는 제목 수정 함수
+# def update_room_title(db, room_id, new_title):
     
-    #room_id 기준으로 room 조회
-    room = db.query(StudyRoom).filter(StudyRoom.id == room_id).first()
+#     #room_id 기준으로 room 조회
+#     room = db.query(StudyRoom).filter(StudyRoom.id == room_id).first()
     
-    #room 없으면 종료
-    if not room:
-        return None
-    #room 제목 수정
-    room.title = new_title
+#     #room 없으면 종료
+#     if not room:
+#         return None
+#     #room 제목 수정
+#     room.title = new_title
     
-    # 실제 DB 저장
-    db.commit()
+#     # 실제 DB 저장
+#     db.commit()
 
-    # 수정된 최신 DB 상태 다시 반영
-    db.refresh(room)
+#     # 수정된 최신 DB 상태 다시 반영
+#     db.refresh(room)
 
-    # 수정 완료된 room 반환
-    return room
+#     # 수정 완료된 room 반환
+#     return room
 
-# 5. 채팅방 삭제 함수
+# 4. 채팅방 삭제 함수
 def delete_room(db, room_id):
     
     # room 조회
@@ -98,8 +98,110 @@ def delete_room(db, room_id):
     # room 없으면 종료
     if not room:
         return None
+    
+    # 현재 room의 자식 room들 조회
+    child_rooms = db.query(StudyRoom).filter(
+        StudyRoom.parent_room_id == room_id
+    ).all()
+
+    # 자식 room들을 최상위 room으로 승격
+    for child in child_rooms:
+        
+        #부모 채팅방과 자식 채팅방을 분리, 자식 room 들을 최상위 room 으로 승격
+        child.parent_room_id = None
+    
+    
 
     db.delete(room)
     db.commit()
 
     return True
+
+# 5.채팅방 이름 변경 함수 
+def update_room_title(db, room_id: int, user_id: int, title: str):
+    # room 조회,id 기준으로 채팅방 찾기
+    room = db.query(StudyRoom).filter(
+        StudyRoom.id == room_id,
+        StudyRoom.user_id == user_id
+    ).first()
+    
+    if not room:
+        return None
+    # 방이 없으면 None 반환
+
+    room.title = title
+    # 채팅방 제목 수정
+
+    db.commit()
+    db.refresh(room)
+    return room
+
+
+# 6. 채팅방을 학습 아카이브 <-> 현재 학습으로 이동하는 함수
+def move_room_to_archive(db, room_id: int, user_id: int):
+    #현재 사용자의 room 조회
+    room = db.query(StudyRoom).filter(
+        StudyRoom.id == room_id,
+        StudyRoom.user_id == user_id
+    ).first()
+    
+    if not room:
+        return None
+    
+    # 현재 변경될 archive 상태 저장
+    new_archive_state = not room.is_archived
+    
+    ## 현재 상태 반대로 변경
+    room.is_archived = new_archive_state
+    
+    # 현재 학습 → 아카이브 이동 시 부모 연결 제거,
+    
+    # 지금 이 채팅방을 아카이브로 이동시키는 중이면,
+    if new_archive_state:
+        
+        # 부모 room 연결 제거 (부모 채팅방 없음 상태로 바꿈)
+        room.parent_room_id = None
+
+    # 하위 자식 room 전체 archive 상태 변경
+    # 함수 안의 함수, 특정 함수 안에서만 사용하는 보조 기능
+    def update_children_archive(parent_id):
+
+        children = db.query(StudyRoom).filter(
+            StudyRoom.parent_room_id == parent_id
+        ).all()
+
+        for child in children:
+            child.is_archived = new_archive_state
+
+            # 자식의 자식도 계속 변경
+            update_children_archive(child.id)
+
+    # 현재 room의 모든 하위 room archive 상태 변경
+    update_children_archive(room.id)
+    
+    db.commit()
+    db.refresh(room)
+    
+    return room
+
+#7. 부모 room 변경 함수
+def update_parent_room(db, room_id: int, user_id: int, parent_room_id: int | None):
+    #None = 최상위 room으로 다시 빼기 가능하게 하기 위해.
+    
+    # 현재 room 조회
+    room = db.query(StudyRoom).filter(
+        StudyRoom.id == room_id,
+        StudyRoom.user_id == user_id
+    ).first()
+
+    # room 없으면 종료
+    if not room:
+        return None
+
+    # 부모 room 변경
+    room.parent_room_id = parent_room_id
+
+    db.commit()
+    db.refresh(room)
+    return room
+
