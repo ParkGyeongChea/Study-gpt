@@ -58,7 +58,156 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
             message
         )
     
+
+    # =========================
+    # 강의 재요청 처리
+    # 현재 학습 단계 반복 학습 가능 함수
+    # =========================
+
+    if "다시" in message or "모르겠어" in message:
+        
+        #임시 에러 대비 코드 추후에 삭제or변경
+        if not user_id or not room_id:
+            return {
+                "lecture": {
+                    "content": "로그인 후 학습 기록을 저장하면 다시 설명 기능을 사용할 수 있습니다."
+                }
+            }
+
+        # ===== 현재 로그인 사용자의 학습 상태 가져오기 =====
+        session = get_study_session(db,user_id,room_id)
+        # session_service.py 파일(사용자 학습 상태를 DB에서 조회하는 역할)의
+        # get_study_session 함수 호출
+
+        # ====== 학습 상태 존재 여부 예외처리 검사 ========
+        if session is None:
+            # DB에 저장된 학습 상태가 없으면 다시 설명할 현재 단계도 없음
+            return {
+                "message": "먼저 학습하고 싶은 내용을 알려주세요."
+            }
+
+        # ====== 현재 저장된 학습 상태 가져오기 ======
+        curriculum = session.curriculum
+        # DB에 저장된 전체 커리큘럼 가져오기
+
+        current_step_index = session.current_step_index
+        # DB에 저장된 현재 학습 단계 index 가져오기
+
+        current_step = curriculum[current_step_index]
+        # 현재 사용자가 배우고 있는 step 데이터 가져오기
+
+        # 현재 step 강의 다시 생성
+        lecture = generate_step_lecture(
+            category=session.category,
+            topic=session.topic,
+            step=current_step,
+            level=session.level
+        )
+        # explain_service.py 파일(현재 step 기준 강의 생성 역할)의
+        # generate_step_lecture 함수 호출
+        # "다시", "모르겠어" 요청에서는 다음 단계로 이동하지 않고
+        # 현재 step 기준으로 강의를 다시 생성한다.
+
+
+        # 로그인 사용자에 한해서만 AI 강의 응답을 chat_message 테이블에 저장
+        if user_id and room_id:
+            save_chat_message(db,user_id,room_id,"assistant",lecture["content"])
+
+        #========== progress(학습 진행도) 기능 ========
+
+        total_steps = len(curriculum)
+        # 전체 커리큘럼 단계 수 계산
+
+        current_step_number = current_step_index + 1
+        # 현재 단계 번호 계산
+        # index는 0부터 시작하므로 사용자 표시용으로 +1
+
+        progress_percent = int((current_step_number / total_steps) * 100)
+        # 진행률 퍼센트 계산
+        # "다시" 요청은 단계 이동이 아니므로 DB progress를 새로 저장하지 않고
+        # 현재 위치 기준 진행률만 응답에 포함한다.
+
+        # 반환
+        return {
+            "current_step": current_step,
+            "lecture": lecture,
+            "progress": {
+                "current": current_step_number,
+                "total": total_steps,
+                "percent": progress_percent
+            }
+        }
+        
+    # 비로그인 사용자는 DB 기반 학습 시스템으로 보내지 않고
+    # 임시 체험 응답을 바로 반환
+    if not user_id or not room_id:
+
+        return {
+            "lecture": {
+            "content": f"""
+            현재는 비로그인 상태입니다.
+
+            '{message}' 요청을 확인했습니다.
+
+            로그인하면 학습 기록 저장, 채팅방 저장, 이어하기 기능을 사용할 수 있습니다.
+            """
+            }
+        
+        }
+        
+    # 현재 로그인 사용자의 학습 세션 조회
+    session = get_study_session(db, user_id, room_id)
     
+    # 현재 퀴즈 진행 중인지 확인
+    if session and session.quiz_answer_data:
+        
+        # "다음"은 퀴즈 답변이 아니라 다음 단계 이동 명령이므로
+        # 아래 퀴즈 채점 로직으로 들어가지 않게 통과시킨다.
+        if message.strip() in ["다음", "다음 단계", "계속"]:
+            pass
+        else:
+            # 사용자 입력 답안 분리
+            user_answers = [
+                answer.strip()
+                for answer in message.split(",")
+            ]
+
+            quizzes = session.quiz_answer_data
+            result_messages = []
+
+            for index, quiz in enumerate(quizzes):
+                correct_answer = quiz["answer"]
+                explanation = quiz["explanation"]
+
+                # 사용자가 답을 덜 입력한 경우
+                if index >= len(user_answers):
+                    result_messages.append(
+                        f"❌ Q{index + 1} 답변이 입력되지 않았습니다."
+                    )
+                    continue
+
+                user_answer = user_answers[index]
+
+                # 정답 판별
+                if user_answer == correct_answer:
+                    result_messages.append(
+                        f"✅ Q{index + 1} 정답입니다!"
+                    )
+
+                else:
+                    result_messages.append(
+                        f"❌ Q{index + 1} 틀렸습니다.\n\n"
+                        f"📘 해설:\n{explanation}"
+                    )
+            # 퀴즈 상태 초기화
+            session.quiz_answer_data = None
+            db.commit()
+            return {
+
+                "message": "\n\n---\n\n".join(result_messages)
+
+            }
+
     # =========================
     # 다음 단계 요청 처리
     # =========================
@@ -190,16 +339,51 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
         # 기본값은 None
         # free 모드에서는 퀴즈를 생성하지 않음
 
+        print("현재 session.study_mode:", session.study_mode)
+        
         if session.study_mode == "light_quiz":
-            # 현재 학습 모드가 light_quiz인지 검사
+            quiz_result = generate_quiz(db, user_id, room_id)
+            quiz = quiz_result["quiz_for_user"]
+            session.quiz_answer_data = quiz_result["quiz_answer_data"]
+            db.commit()
+            
+            quiz_text_parts = []
+            
+            for index,quiz_item in enumerate(quiz):
+                
+                choices_text = ""
+                
+                for choice_index, choice in enumerate(quiz_item["choices"]):
+                    choices_text += f"({choice_index + 1}) {choice}\n\n"
 
-            quiz = generate_quiz(db, user_id, room_id)
-            # quiz_service.py 파일(현재 학습 상태 기준 퀴즈 생성 역할)의
-            # generate_quiz 함수 호출
-            # 현재 구조에서는 DB에서 현재 로그인 사용자의 session을 조회해야 하므로
-            # db와 user_id를 함께 전달한다.
-            # 단, quiz_service.py도 generate_quiz(db, user_id) 구조로 수정되어 있어야 한다.
+                quiz_block = (
+                    f"---\n"
+                    f"## 📝 학습 확인 퀴즈 {index + 1}\n\n"
+                    f"{quiz_item['question']}\n\n"
+                    f"{choices_text}"
+                )
+                
+                quiz_text_parts.append(quiz_block)
+            
+            quiz_intro = (
+                "📝 이번 챕터에서 배운 내용을 "
+                "간단한 퀴즈로 체크해보세요!\n\n"
 
+                "답변 예시:\n"
+                "- 1,2\n"
+                "- 1번, 2번\n\n"
+            )
+
+            quiz_text = quiz_intro + "\n".join(quiz_text_parts)
+                        
+            save_chat_message(
+                db,
+                user_id,
+                room_id,
+                "assistant",
+                quiz_text
+            )
+                
         # 최종 반환
         return {
             "current_step": next_step,
@@ -211,102 +395,9 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
                 "percent": progress_percent
             }
         }
-
-    # =========================
-    # 강의 재요청 처리
-    # 현재 학습 단계 반복 학습 가능 함수
-    # =========================
-
-    if "다시" in message or "모르겠어" in message:
-        
-        #임시 에러 대비 코드 추후에 삭제or변경
-        if not user_id or not room_id:
-            return {
-                "lecture": {
-                    "content": "로그인 후 학습 기록을 저장하면 다시 설명 기능을 사용할 수 있습니다."
-                }
-            }
-
-        # ===== 현재 로그인 사용자의 학습 상태 가져오기 =====
-        session = get_study_session(db,user_id,room_id)
-        # session_service.py 파일(사용자 학습 상태를 DB에서 조회하는 역할)의
-        # get_study_session 함수 호출
-
-        # ====== 학습 상태 존재 여부 예외처리 검사 ========
-        if session is None:
-            # DB에 저장된 학습 상태가 없으면 다시 설명할 현재 단계도 없음
-            return {
-                "message": "먼저 학습하고 싶은 내용을 알려주세요."
-            }
-
-        # ====== 현재 저장된 학습 상태 가져오기 ======
-        curriculum = session.curriculum
-        # DB에 저장된 전체 커리큘럼 가져오기
-
-        current_step_index = session.current_step_index
-        # DB에 저장된 현재 학습 단계 index 가져오기
-
-        current_step = curriculum[current_step_index]
-        # 현재 사용자가 배우고 있는 step 데이터 가져오기
-
-        # 현재 step 강의 다시 생성
-        lecture = generate_step_lecture(
-            category=session.category,
-            topic=session.topic,
-            step=current_step,
-            level=session.level
-        )
-        # explain_service.py 파일(현재 step 기준 강의 생성 역할)의
-        # generate_step_lecture 함수 호출
-        # "다시", "모르겠어" 요청에서는 다음 단계로 이동하지 않고
-        # 현재 step 기준으로 강의를 다시 생성한다.
-
-
-        # 로그인 사용자에 한해서만 AI 강의 응답을 chat_message 테이블에 저장
-        if user_id and room_id:
-            save_chat_message(db,user_id,room_id,"assistant",lecture["content"])
-
-        #========== progress(학습 진행도) 기능 ========
-
-        total_steps = len(curriculum)
-        # 전체 커리큘럼 단계 수 계산
-
-        current_step_number = current_step_index + 1
-        # 현재 단계 번호 계산
-        # index는 0부터 시작하므로 사용자 표시용으로 +1
-
-        progress_percent = int((current_step_number / total_steps) * 100)
-        # 진행률 퍼센트 계산
-        # "다시" 요청은 단계 이동이 아니므로 DB progress를 새로 저장하지 않고
-        # 현재 위치 기준 진행률만 응답에 포함한다.
-
-        # 반환
-        return {
-            "current_step": current_step,
-            "lecture": lecture,
-            "progress": {
-                "current": current_step_number,
-                "total": total_steps,
-                "percent": progress_percent
-            }
-        }
-        
-    # 비로그인 사용자는 DB 기반 학습 시스템으로 보내지 않고
-    # 임시 체험 응답을 바로 반환
-    if not user_id or not room_id:
-
-        return {
-            "lecture": {
-            "content": f"""
-            현재는 비로그인 상태입니다.
-
-            '{message}' 요청을 확인했습니다.
-
-            로그인하면 학습 기록 저장, 채팅방 저장, 이어하기 기능을 사용할 수 있습니다.
-            """
-            }
-        }
-
+    
+    
+    
     # =========================
     # 일반 intent 분석
     # =========================
@@ -384,7 +475,47 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
                 room_id,
                 "assistant",
                 study_result["lecture"]["content"]
-            ) 
+            )
+            
+            # 퀴즈 내용도 DB 저장
+            if study_result.get("quiz") and user_id and room_id:
+
+                quiz_text_parts = []
+
+                for index, quiz in enumerate(study_result["quiz"]):
+
+                    choices_text = ""
+
+                    for choice_index, choice in enumerate(quiz["choices"]):
+                        choices_text += f"({choice_index + 1}) {choice}\n\n"
+
+                    quiz_block = (
+                        f"---\n"
+                        f"## 📝 학습 확인 퀴즈 {index + 1}\n\n"
+                        f"{quiz['question']}\n\n"
+                        f"{choices_text}"
+                    )
+
+                    quiz_text_parts.append(quiz_block)
+
+                quiz_intro = (
+                    "📝 이번 챕터에서 배운 내용을 "
+                    "간단한 퀴즈로 체크해보세요!\n\n"
+
+                    "답변 예시:\n"
+                    "- 1,2\n"
+                    "- 1번, 2번\n\n"
+                )
+
+                quiz_text = quiz_intro + "\n".join(quiz_text_parts)
+
+                save_chat_message(
+                        db,
+                        user_id,
+                        room_id,
+                        "assistant",
+                        quiz_text
+                )
         
         return study_result
 

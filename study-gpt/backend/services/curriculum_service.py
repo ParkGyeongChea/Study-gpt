@@ -1,7 +1,7 @@
 #curriculum_service.py
 
 #=========================================
-
+# 학습 흐름 제어, step 관리 ,session 저장
 # study_router.py가 받은 요청을 넘겨주면,
 # curriculum_service.py가 그 요청을 해석해서
 # 카테고리와 커리큘럼 결과를 만들어주는 파일
@@ -22,13 +22,7 @@ from services.llm_service import analyze_user_input
 from services.explain_service import generate_step_lecture
 from services.session_service import save_study_session, get_study_session
 from services.quiz_service import generate_quiz
-
-
 from services.chat_message_service import get_chat_messages
-
-
-
-
 
 #====================================================
 
@@ -134,7 +128,7 @@ def start_study_service(
     # 9. 현재 학습 상태 저장
     # 현재 사용자의 학습 진행 정보를 저장
     # 이후 진행률 관리, 다음 단계 이동 등에 활용 가능
-    save_study_session(
+    session = save_study_session(
         db=db,
         user_id=user_id,
         room_id=room_id,
@@ -159,17 +153,32 @@ def start_study_service(
     )
     
     #========= light_quiz 모드 퀴즈 생성 =============
-
+    
+    print("퀴즈 생성 시작")
+    
     quiz = None
+    quiz_for_user = None
+    quiz_answer_data = None
     # 기본값은 None
     # free 모드에서는 퀴즈를 생성하지 않음
+    
+    if study_mode in ["light_quiz", "strict_quiz"]:
+        # 현재 학습 모드가 light_quiz인지,strict인지 검사
 
-    if study_mode == "light_quiz":
-        # 현재 학습 모드가 light_quiz인지 검사
-
-        quiz = generate_quiz(db, user_id)
+        quiz = generate_quiz(db, user_id, room_id)
         # 현재 step 기준으로 퀴즈 생성
         
+        #quiz_for_user =사용자 화면 출력용 문제
+        #quiz_answer_data = 정답 + 해설 포함 내부 데이터
+        quiz_for_user = quiz["quiz_for_user"]
+
+        quiz_answer_data = quiz["quiz_answer_data"]
+        
+        #현재 퀴즈 정답 상태를 DB session 에 저장, 이제 서버는 현재 문제 정답이 뭔지 기억 가능
+        session.quiz_answer_data = quiz_answer_data
+
+        db.commit()
+              
       
     # 11. 최종 응답
     #최종 응답을 딕셔너리 형태로 반환한다.
@@ -180,7 +189,7 @@ def start_study_service(
         "curriculum": curriculum,
         "current_step": current_step,
         "lecture": first_lecture,
-        "quiz":quiz
+        "quiz":quiz_for_user
     }
 
     #사용자는 API 응답으로 아래처럼 받는다.

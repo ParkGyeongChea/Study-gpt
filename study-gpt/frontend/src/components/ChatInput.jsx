@@ -34,8 +34,12 @@ export default function ChatInput({
   isLoading,
   // 현재 AI 응답 생성 중인지 여부
 
-  setIsLoading
+  setIsLoading,
   // AI 로딩 상태 변경 함수
+
+  studyMode,
+  setStudyMode
+  //학습 모드 저장
 
 }) {
 
@@ -43,7 +47,7 @@ export default function ChatInput({
   const [message, setMessage] = useState("");
 
   // 현재 선택된 학습 모드 저장 state
-  const [selectedMode, setSelectedMode] = useState("free");
+  //const [selectedMode, setSelectedMode] = useState("free");
 
 
   //=====================================
@@ -137,7 +141,7 @@ export default function ChatInput({
 
       message: message,
 
-      study_mode: selectedMode
+      study_mode: studyMode
     };
     
     // 로그인 상태일 때만 room_id 추가
@@ -158,20 +162,69 @@ export default function ChatInput({
       setRoomRefreshTrigger((prev) => prev + 1);
 
 
-      // assistant 메시지 생성
-      const assistantMessage = {
+      // assistant 메시지 배열 생성
+      const newMessages = [];
 
-        id: Date.now() + 1,
+      // 강의 + 퀴즈를 하나의 assistant message로 합치기
+      let assistantContent = "";
 
-        role: "assistant",
+      // 강의 내용 추가
+      if (response.data?.lecture?.content) {
+        assistantContent += response.data.lecture.content;
+      }
 
-        content:
-          response.data?.lecture?.content ||
-          response.data?.message ||
-          "응답을 불러오지 못했습니다."
+      // 퀴즈 내용 추가
+      if (response.data?.quiz) {
+        const quizBlocks = response.data.quiz.map((quiz, index) => {
+          const choicesText = quiz.choices
+            .map((choice, choiceIndex) => `(${choiceIndex + 1}) ${choice}`)
+            .join("\n\n");
 
-      };
+          return [
+            "---",
+            "",
+            `## 📝 학습 확인 퀴즈 ${index + 1}`,
+            "",
+            quiz.question,
+            "",
+            choicesText
+          ].join("\n");
+        });
 
+        const quizText = [
+          "---",
+          "",
+          "# 📝 이번 챕터에서 배운 내용을 간단한 퀴즈로 체크해보세요!",
+          "",
+          "## 답변 예시",
+          "- 1,2",
+          "- 1번, 2번",
+          "",
+          "💡 만약 문제를 다시 풀고 싶으시면 '다시 문제 내줘' 라고 입력해보세요!",
+          "",
+          quizBlocks.join("\n\n")
+        ].join("\n");
+
+        assistantContent += "\n\n" + quizText;
+      }
+
+      // 최종 assistant 메시지 추가
+      if (assistantContent) {
+        newMessages.push({
+          id: Date.now() + 1,
+          role: "assistant",
+          content: assistantContent
+        });
+      }
+
+      // 일반 message 응답 추가
+      if (response.data?.message) {
+        newMessages.push({
+          id: Date.now() + 3,
+          role: "assistant",
+          content: response.data.message
+        });
+      }
 
       // assistant 메시지 추가
       setMessages((prev) => {
@@ -181,8 +234,8 @@ export default function ChatInput({
           (msg) => msg.id !== "loading"
         );
 
-        // 기존 메시지 유지 + assistant 추가
-        return [...filteredMessages, assistantMessage];
+        // 기존 메시지 유지 + 배열 안 메시지들을 전부 추가
+        return [...filteredMessages, ...newMessages];
 
       });
 
@@ -284,10 +337,11 @@ export default function ChatInput({
 
           {/* 학습 모드 선택 dropdown */}
           <select
+            //현재 dropdown 이 어떤 값을 보여줄지 결정하는 코드
+            value={studyMode}
 
-            value={selectedMode}
-
-            onChange={(e) => setSelectedMode(e.target.value)}
+            //사용자가 dropdown 변경 시, studyMode state 변경하는 코드.
+            onChange={(e) => setStudyMode(e.target.value)}
 
             className="
               bg-gray-100

@@ -4,7 +4,7 @@
 #채팅방 생성/ 채팅방 목록 조회 로직을 처리하는 서비스 파일
 
 from models.study_room import StudyRoom
-from services.llm_service import llm
+from services.shared_llm import llm
 from sqlalchemy import desc
 #desc = 정렬을 내림차순으로 하겠다는 뜻 , 최신 날짜 -> 오래된날짜 순서로 정렬할떄 사용
 

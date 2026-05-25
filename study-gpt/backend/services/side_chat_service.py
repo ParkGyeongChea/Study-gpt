@@ -13,7 +13,7 @@ load_dotenv()
 
 llm = ChatOpenAI(
     model="gpt-4o-mini",
-    temperature=0.5
+    temperature=0.3
 )
 
 #1. 사이드챗 함수 생성

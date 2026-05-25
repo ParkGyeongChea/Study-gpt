@@ -53,6 +53,9 @@ class StudySession(Base):
     #Level 컬럼 ,난이도 저장 컬럼
     level = Column(String)
     
+    #현재 퀴즈의 정답 데이터 저장
+    quiz_answer_data = Column(JSON, nullable=True)
+    
     #current_step 컬럼 (몇 단계 공부 중인지 저장하는 데이터 default=1 은 기본적으로 1단계부터 시작)
     current_step = Column(JSON)
     

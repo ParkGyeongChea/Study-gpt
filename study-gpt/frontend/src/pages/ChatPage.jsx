@@ -28,6 +28,9 @@ export default function ChatPage() {
   // 현재 선택된 room 저장 state
   const [selectedRoom, setSelectedRoom] = useState(null);
 
+  // 현재 선택된 학습 모드 저장 state
+  const [studyMode, setStudyMode] = useState("free");
+
   // 메시지 새로고침용 state
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -211,6 +214,8 @@ export default function ChatPage() {
                   setMessages={setMessages}
                   isLoading={isLoading}
                   setIsLoading={setIsLoading}
+                  studyMode={studyMode}
+                  setStudyMode={setStudyMode}
                 />
               </div>
             </div>
@@ -259,6 +264,8 @@ export default function ChatPage() {
                       setMessages={setMessages}
                       isLoading={isLoading}
                       setIsLoading={setIsLoading}
+                      studyMode={studyMode}
+                      setStudyMode={setStudyMode}
                     />
                 </div>
               </div>

@@ -1,8 +1,11 @@
 #quiz_service.py
+#퀴즈 실제 데이터 전달, 응답 후처리, json 파싱
 
 from services.session_service import get_study_session
 from langchain_openai import ChatOpenAI
+from services.chains.quiz_chain import quiz_chain
 from dotenv import load_dotenv
+import json
 
 
 # .env 파일 환경변수 로드
@@ -46,60 +49,37 @@ def generate_quiz(db, user_id: int, room_id: int):
     step_title = current_step.get("title")
     
 
-    #4.prompt 작성
-    prompt = f"""
-        너는 초보자를 위한 학습 퀴즈를 만들어주는 AI다.
-
-        현재 학습 정보:
-
-        - 카테고리: {category}
-        - 주제: {topic}
-        - 현재 학습 단계: {step_title}
-        - 난이도: {level}
-
-        규칙:
-
-        - 현재 학습 단계(step_title) 중심으로 문제를 만들어라
-        - 초보자도 이해할 수 있게 쉽게 만들어라
-        - 객관식 문제만 생성하라
-        - 문제는 1~2개만 생성하라
-        - 각 문제의 보기는 4개로 구성하라
-        - 정답도 함께 출력하라
-        - 너무 길게 설명하지 마라
-
-        출력 형식 예시:
-
-        Q1.
-        1.
-        2.
-        3.
-        4.
-
-        정답:
-
-        Q2.
-        1.
-        2.
-        3.
-        4.
-
-        정답:
-    """
-
-    
+    #chain 연결
     try:
-
-        response = llm.invoke(prompt)
-        # ChatOpenAI()로 생성한 GPT 객체 llm을 이용해서,
-        # 현재 작성한 prompt를 GPT에게 보내고 응답을 받아오는 코드
+        response = quiz_chain.invoke({
+            "category": category,
+            "topic": topic,
+            "step_title": step_title,
+            "level": level
+        })
 
         quiz_content = response.content.strip()
         # llm.invoke(prompt)로 받아온 GPT 응답 객체(response) 안에서,
         # 실제 텍스트(content)만 꺼내고,
         # strip()으로 앞뒤 공백 제거
+        
+        # GPT JSON 문자열 → Python dict 변환
+        quiz_data = json.loads(quiz_content)
 
-        return quiz_content
-        # 최종 퀴즈 문자열 반환
+        # 사용자에게 보여줄 퀴즈 데이터
+        quiz_for_user = []
+        for quiz in quiz_data["quiz"]:
+            #quiz_for_user = 사용자 화면 전용 데이터
+            quiz_for_user.append({
+                "question": quiz["question"],
+                "choices": quiz["choices"]
+            })
+
+        # 내부 정답 데이터 포함 반환
+        return {
+            "quiz_for_user": quiz_for_user,
+            "quiz_answer_data": quiz_data["quiz"]
+        }
 
 
     except Exception as e:
