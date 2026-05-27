@@ -4,6 +4,9 @@
 #채팅방 생성/ 채팅방 목록 조회 로직을 처리하는 서비스 파일
 
 from models.study_room import StudyRoom
+from models.study_session import StudySession
+from models.chat_message import ChatMessage
+
 from services.shared_llm import llm
 from sqlalchemy import desc
 #desc = 정렬을 내림차순으로 하겠다는 뜻 , 최신 날짜 -> 오래된날짜 순서로 정렬할떄 사용
@@ -66,26 +69,7 @@ def generate_room_title(message: str):
     
     return title
 
-# # 4. 채팅방 제목을 실제 DB에 저장하는 제목 수정 함수
-# def update_room_title(db, room_id, new_title):
-    
-#     #room_id 기준으로 room 조회
-#     room = db.query(StudyRoom).filter(StudyRoom.id == room_id).first()
-    
-#     #room 없으면 종료
-#     if not room:
-#         return None
-#     #room 제목 수정
-#     room.title = new_title
-    
-#     # 실제 DB 저장
-#     db.commit()
 
-#     # 수정된 최신 DB 상태 다시 반영
-#     db.refresh(room)
-
-#     # 수정 완료된 room 반환
-#     return room
 
 # 4. 채팅방 삭제 함수
 def delete_room(db, room_id):
@@ -109,7 +93,16 @@ def delete_room(db, room_id):
         
         #부모 채팅방과 자식 채팅방을 분리, 자식 room 들을 최상위 room 으로 승격
         child.parent_room_id = None
-    
+        
+    # 현재 room에 연결된 채팅 메시지 삭제
+    db.query(ChatMessage).filter(
+        ChatMessage.room_id == room_id
+    ).delete()
+
+    # 현재 room에 연결된 학습 세션 삭제
+    db.query(StudySession).filter(
+        StudySession.room_id == room_id
+    ).delete()
     
 
     db.delete(room)

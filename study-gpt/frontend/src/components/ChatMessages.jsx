@@ -89,14 +89,11 @@ export default function ChatMessages({
           className={`
 
             animate-messageFade
-
             w-full
 
             ${
               message.role === "user"
-
                 ? "flex justify-end"
-
                 : "flex justify-start"
             }
 
@@ -106,22 +103,113 @@ export default function ChatMessages({
           {/* 사용자 메시지 */}
           {message.role === "user" ? (
 
-            <div
-              className="
-                max-w-[85%]
+            <div className="
+              flex
+              flex-col
+              items-end
+              gap-3
 
-                px-5
-                py-3
+              max-w-[85%]
+            ">
 
-                rounded-full
+              {/* 업로드 파일 카드 */}
+              {message.files?.length > 0 && (
 
-                bg-zinc-900
-                text-white
+                <div className="flex flex-col gap-2 w-full items-end">
 
-                whitespace-pre-wrap
-              "
-            >
-              {message.content}
+                  {message.files.map((file, index) => (
+
+                    <div
+                      key={index}
+
+                      className="
+                        flex
+                        items-center
+                        gap-3
+
+                        bg-zinc-900
+                        border
+                        border-zinc-700
+
+                        rounded-2xl
+
+                        px-4
+                        py-3
+
+                        min-w-[260px]
+                        max-w-[320px]
+
+                        shadow-md
+                      "
+                    >
+
+                      {/* 파일 아이콘 */}
+                      <div className="
+                        w-10
+                        h-10
+
+                        rounded-xl
+
+                        bg-red-500
+
+                        flex
+                        items-center
+                        justify-center
+
+                        text-white
+                        text-lg
+                      ">
+                        📄
+                      </div>
+
+                      {/* 파일 정보 */}
+                      <div className="flex-1 min-w-0">
+
+                        <div className="
+                          text-sm
+                          font-semibold
+                          text-white
+
+                          truncate
+                        ">
+                          {file.name}
+                        </div>
+
+                        <div className="
+                          text-xs
+                          text-zinc-400
+                        ">
+                          PDF
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  ))}
+
+                </div>
+
+              )}
+
+              {/* 실제 사용자 메시지 */}
+              <div
+                className="
+                  px-5
+                  py-3
+
+                  rounded-full
+
+                  bg-zinc-900
+                  text-white
+
+                  whitespace-pre-wrap
+                "
+              >
+
+                {message.content}
+
+              </div>
 
             </div>
 
@@ -156,125 +244,219 @@ export default function ChatMessages({
               "
             >
 
-              <ReactMarkdown
-                components={{
-                  code({ inline, className, children, ...props }) {
+              {(() => {
 
-                    const match = /language-(\w+)/.exec(className || "");
+                let parsedContent = null;
 
-                    return !inline && match ? (
+                // JSON parse 시도
+                try {
 
-                      <div className="relative">
-                        {/* 언어 표시 */}
-                        <div
-                          className="
-                            absolute
-                            top-3
-                            left-3
-                            flex
-                            items-center
-                            gap-2
-                            px-3
-                            py-1
-                            rounded-md
-                            bg-black/30
-                            backdrop-blur-sm
-                            text-zinc-200
-                            text-xs
-                            font-bold
-                            tracking-wide
-                            z-10
-                          "
-                        >
-                          <span>{"</>"}</span>
-                          <span>
-                            {match[1]}
-                          </span>
+                  parsedContent = JSON.parse(message.content);
+
+                } catch {
+
+                  parsedContent = null;
+                }
+
+                // =========================
+                // quiz 타입 메시지
+                // =========================
+
+                if (parsedContent?.type === "quiz") {
+
+                  return (
+
+                    <div className="space-y-10">
+
+                      {parsedContent.quiz.map((quiz, index) => (
+
+                        <div key={index}>
+
+                          <hr className="border-zinc-700 mb-8" />
+
+                          <h2 className="text-3xl font-bold mb-10">
+                            📝 학습 확인 퀴즈 {index + 1}
+                          </h2>
+
+                          <p className="mb-10 text-xl leading-10">
+                            {quiz.question}
+                          </p>
+
+                          <div className="space-y-8">
+
+                            {quiz.choices.map((choice, choiceIndex) => (
+
+                              <div
+                                key={choiceIndex}
+                                className="text-lg leading-9"
+                              >
+                                ({choiceIndex + 1}) {choice}
+                              </div>
+
+                            ))}
+
+                          </div>
 
                         </div>
-                        <button
 
-                          onClick={() => {
-                            navigator.clipboard.writeText(
-                              String(children).replace(/\n$/, "")
-                            );
-                            setCopied(true);
+                      ))}
 
-                            setTimeout(() => {
-                              setCopied(false);
-                            }, 1500);
+                    </div>
 
-                          }}
+                  );
+                }
 
-                          className="
-                            absolute
-                            top-3
-                            right-3
+                // =========================
+                // quiz_result 타입 메시지
+                // =========================
 
-                            text-xs
+                if (parsedContent?.type === "quiz_result") {
 
-                            bg-zinc-700
-                            hover:bg-zinc-600
+                  return (
+                    <div className="space-y-8">
+                      <hr className="border-zinc-700 mb-8" />
+                      <h2 className="text-3xl font-bold mb-10">
+                        📘 퀴즈 풀이 결과
+                      </h2>
 
-                            text-white
+                      <ReactMarkdown>
+                        {parsedContent.content}
+                      </ReactMarkdown>
+                    </div>
+                  );
+                }
 
-                            w-8
-                            h-8
+                // =========================
+                // 일반 markdown 메시지
+                // =========================
 
-                            flex
-                            items-center
-                            justify-center
+                return (
 
-                            rounded-lg
-                            
+                  <ReactMarkdown
+                    components={{
+                      code({ inline, className, children, ...props }) {
 
-                            transition
-                          "
-                        >
-                          <span className="text-lg">
-                            {copied ? (
-                                "✅"
-                            ) : (
-                              <Copy size={18} />
-                            )}
-                          </span>
+                        const match = /language-(\w+)/.exec(className || "");
+
+                        return !inline && match ? (
+
+                          <div className="relative">
+
+                            <div
+                              className="
+                                absolute
+                                top-3
+                                left-3
+                                flex
+                                items-center
+                                gap-2
+                                px-3
+                                py-1
+                                rounded-md
+                                bg-black/30
+                                backdrop-blur-sm
+                                text-zinc-200
+                                text-xs
+                                font-bold
+                                tracking-wide
+                                z-10
+                              "
+                            >
+                              <span>{"</>"}</span>
+                              <span>
+                                {match[1]}
+                              </span>
+                            </div>
+
+                            <button
+
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  String(children).replace(/\n$/, "")
+                                );
+
+                                setCopied(true);
+
+                                setTimeout(() => {
+                                  setCopied(false);
+                                }, 1500);
+
+                              }}
+
+                              className="
+                                absolute
+                                top-3
+                                right-3
+
+                                text-xs
+
+                                bg-zinc-700
+                                hover:bg-zinc-600
+
+                                text-white
+
+                                w-8
+                                h-8
+
+                                flex
+                                items-center
+                                justify-center
+
+                                rounded-lg
+
+                                transition
+                              "
+                            >
+                              <span className="text-lg">
+                                {copied ? (
+                                  "✅"
+                                ) : (
+                                  <Copy size={18} />
+                                )}
+                              </span>
+
                             </button>
 
-                        <SyntaxHighlighter
-                          style={oneDark}
-                        language={match[1]}
-                        PreTag="div"
-                        customStyle={{
-                          borderRadius: "16px",
-                          paddingTop: "52px",
-                          paddingRight: "20px",
-                          paddingBottom: "20px",
-                          paddingLeft: "20px",
-                          marginTop: "16px",
-                          marginBottom: "16px",
-                          fontSize: "15px"
-                        }}
-                        {...props}
-                      >
-                        {String(children).replace(/\n$/, "")}
-                      </SyntaxHighlighter>
-                      </div>
-                    ) : (
+                            <SyntaxHighlighter
+                              style={oneDark}
+                              language={match[1]}
+                              PreTag="div"
+                              customStyle={{
+                                borderRadius: "16px",
+                                paddingTop: "52px",
+                                paddingRight: "20px",
+                                paddingBottom: "20px",
+                                paddingLeft: "20px",
+                                marginTop: "16px",
+                                marginBottom: "16px",
+                                fontSize: "15px"
+                              }}
+                              {...props}
+                            >
+                              {String(children).replace(/\n$/, "")}
+                            </SyntaxHighlighter>
 
-                      <code
-                        className="bg-zinc-800 px-1 py-0.5 rounded"
-                        {...props}
-                      >
-                        {children}
-                      </code>
+                          </div>
 
-                    );
+                        ) : (
 
-                  }
-                }}
-              >
-                {message.content}
-              </ReactMarkdown>
+                          <code
+                            className="bg-zinc-800 px-1 py-0.5 rounded"
+                            {...props}
+                          >
+                            {children}
+                          </code>
+
+                        );
+                      }
+                    }}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+
+                );
+
+              })()}
 
             </div>
 

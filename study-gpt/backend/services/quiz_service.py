@@ -21,32 +21,10 @@ llm = ChatOpenAI(
 
 # 퀴즈 생성 함수
 # db에서 현재 로그인 사용자 기준 학습 상태를 가져옴
-def generate_quiz(db, user_id: int, room_id: int):
+def generate_quiz(category: str, topic: str, step: dict, level: str):
     
-    #1.현재 학습 상태 가져오기
-    session = get_study_session(db, user_id, room_id)
-    # session_service.py 파일에서,
-    # 현재 학습 상태를 반환하는 역할을 하는
-    # get_study_session() 함수 실행
-    # 현재 로그인 사용자의 studySession DB 데이터 조회
+    step_title = step.get("title")
     
-    # 사용자가 학습 시작을 하지 않고 바로 퀴즈 요청 하는 경우 
-    if session is None:
-
-        return "먼저 학습을 시작해주세요."
-    
-
-    #2.StudySession ORM 객체에서 필요한 값 가져오기
-    #(이전) .get 은 딕셔너리 값을 가져옴, session.값은 orm 객체 속성 접근
-    category = session.category
-    topic = session.topic
-    level = session.level
-    current_step = session.current_step
-    
-
-    #3.current_step(dict 형태 step 객체) 안에서
-    # 현재 단계 제목(title)만 꺼내기
-    step_title = current_step.get("title")
     
 
     #chain 연결
@@ -68,8 +46,9 @@ def generate_quiz(db, user_id: int, room_id: int):
 
         # 사용자에게 보여줄 퀴즈 데이터
         quiz_for_user = []
+        
         for quiz in quiz_data["quiz"]:
-            #quiz_for_user = 사용자 화면 전용 데이터
+            
             quiz_for_user.append({
                 "question": quiz["question"],
                 "choices": quiz["choices"]

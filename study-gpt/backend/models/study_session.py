@@ -50,6 +50,10 @@ class StudySession(Base):
     #Study_mode 컬럼 추가 (현재 학습 모드 저장)
     study_mode = Column(String)
     
+    # 현재 학습 상태 저장 컬럼
+    # learning / paused / finished
+    learning_status = Column(String, default="learning")
+    
     #Level 컬럼 ,난이도 저장 컬럼
     level = Column(String)
     

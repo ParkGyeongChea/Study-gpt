@@ -2,9 +2,15 @@
 
 # 사용자 요청을 받아서 → agent_service로 전달하는 역할 (라우터 = API 입구)
 
-from fastapi import APIRouter, Depends, Header 
+from fastapi import (
+    APIRouter,
+    Depends,
+    Header,
+    UploadFile,
+    File,
+    Form
+)
 #Depends= 필요한 기능 자동 실행 기능 , Header = JWT 토큰 없어도 허용하는 수동 처리
-from schemas.study_schema import StudyRequest # 요청 데이터 형식을 정의한 Pydantic 모델
 from services import agent_service 
 from sqlalchemy.orm import Session #DB 연결 객체 타입(Session) 불러오기
 from db.database import get_db #DB 연결 생성 함수 get_db 불러오기
@@ -19,7 +25,10 @@ router = APIRouter() # 라우터 객체 생성 (여기에 API들을 등록함)
 # 클라이언트가 POST 방식으로 "/agent" 경로로 요청을 보내면 아래 함수 실행
 
 def run_agent(
-    request: StudyRequest, #사용자 요청 데이터
+    message: str = Form(...),
+    study_mode: str = Form(...),
+    room_id: int | None = Form(default=None),
+    files: list[UploadFile] | None = File(default=None),
     
     db: Session = Depends(get_db), 
     #get_db() 실행해서 DB연결 자동 준비
@@ -53,9 +62,10 @@ def run_agent(
     return agent_service.run(
         db=db, #현재 db연결 전달
         user_id=user_id,
-        room_id=request.room_id,
-        message=request.message, #사용자 입력 메시지 전달
-        study_mode=request.study_mode #현재 학습 모드 전달
+        room_id=room_id,
+        message=message, #사용자 입력 메시지 전달
+        study_mode=study_mode, #현재 학습 모드 전달
+        files=files
         )
         
     # request에서 message 값을 꺼내서 agent_service의 run 함수에 전달

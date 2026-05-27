@@ -26,7 +26,8 @@ def save_study_session(
     curriculum,
     current_step_index,
     current_step,
-    study_mode
+    study_mode,
+    learning_status
 ):
 
     # 현재 로그인 사용자의 기존 학습 기록 조회
@@ -47,6 +48,7 @@ def save_study_session(
         session.current_step_index = current_step_index
         session.current_step = current_step
         session.study_mode = study_mode
+        session.learning_status = learning_status
 
     # 기존 기록이 없으면 새로 생성 (INSERT)
     else:
@@ -62,7 +64,8 @@ def save_study_session(
             current_step_index=current_step_index,
             current_step=current_step,
             study_mode=study_mode,
-            progress=0
+            progress=0,
+            learning_status=learning_status,
         )
 
         db.add(session)
@@ -139,11 +142,8 @@ def update_current_step(
     ).first()
 
     if session:
-
         session.current_step = step
-
         db.commit()
-
         db.refresh(session)
 
     return session
@@ -166,11 +166,30 @@ def update_study_mode(
     ).first()
 
     if session:
-
         session.study_mode = mode
+        db.commit()
+        db.refresh(session)
+
+    return session
+
+# ============================================================
+# 현재 학습 상태 수정 함수
+# ============================================================
+
+# 현재 사용자의 학습 상태를 DB에서 수정하는 역할
+def update_learning_status(db: Session, user_id: int, room_id: int, learning_status: str):
+
+    session = db.query(StudySession).filter(
+        StudySession.user_id == user_id,
+        StudySession.room_id == room_id
+    ).first()
+
+    if session:
+
+        # 현재 학습 상태 수정
+        session.learning_status = learning_status
 
         db.commit()
-
         db.refresh(session)
 
     return session

@@ -7,24 +7,159 @@
 # 사용자별 학습 상태를 DB 기준으로 조회/수정한다.
 
 from services.llm_service import analyze_intent
-from services.curriculum_service import (start_study_service,get_next_step,)
 from services.explain_service import (explain_service,generate_step_lecture)
-from services.quiz_service import generate_quiz
 from services.session_service import (get_study_session,update_step_index,update_current_step)
+from services.chains.document_intent_chain import analyze_document_intent
 from services.chat_message_service import save_chat_message
 from services.room_service import (generate_room_title, update_room_title) #채팅방 관련 기능 파일 
 from services.chat_message_service import get_chat_messages #특정 room의 기존 채팅 메시지 목록 조회
 from services.chat_service import chat_service
+from services.quiz_service import generate_quiz
+from services.session_service import save_study_session
+from services.rag_service import (
+    load_pdf,
+    split_documents,
+    create_vector_store,
+    save_local_vector_store, #디스크 저장
+    load_local_vector_store, #서버 재시작 후 복구
+    add_documents_to_vector_store,
+    search_similar_documents
+)
+from services.chains.document_curriculum_chain import (
+    generate_document_curriculum #문서 기반 step 생성
+)
+
+from services.curriculum_service import (
+    parse_curriculum #기존 curriculum 구조 변환
+)
+
+from services.graph.study_graph import app as study_graph_app
+from services.graph.learning_flow_graph import app as learning_flow_app
+from services.chains.learning_intent_chain import (learning_intent_chain)
+from services.vector_store_manager import (save_vector_store,get_vector_store)
+#파일 업로드 저장 및 다시 불러오기 기능 import
+
+import json
+import os
+from fastapi import UploadFile
 
 #===================================================================
 
 # 1. 사용자 입력을 가장 먼저 받아서, 무슨 기능을 실행할지 판단하는 중앙 제어 함수.
-def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
-    # 사용자 입력을 받아 intent 분석 후 기능을 분기하고,
-    # 현재 로그인 사용자(user_id)와 DB 연결(db)을 함께 전달하는 AI 기능 중앙 제어 함수
+def run(db, user_id: int, room_id: int, message: str, study_mode: str = None, files: list[UploadFile] | None = None):
     
-    #비 로그인 상태의 사용자는 room_id가 없으므로, 로그인 사용자일 때만 메시지 조회
     messages = []
+    
+    # 업로드 파일 저장 처리
+    uploaded_file_paths = []
+
+    if files:
+
+        # uploads 폴더 자동 생성
+        os.makedirs("uploads",exist_ok=True)
+
+        for file in files:
+
+            # 저장 경로 생성
+            file_path = (f"uploads/{file.filename}")
+
+            # 실제 파일 저장
+            with open(
+                file_path,
+                "wb"
+            ) as buffer:
+
+                buffer.write(
+                    file.file.read()
+                )
+
+            uploaded_file_paths.append(
+                file_path
+            )
+
+        print("업로드 파일:",uploaded_file_paths)
+        
+        
+        # 업로드 PDF 문서 읽기
+        uploaded_documents = []
+
+        for file_path in uploaded_file_paths:
+
+            try:
+                # PDF 문서 로드
+                documents = load_pdf(file_path)
+                uploaded_documents.extend(documents)
+                print(f"문서 로드 완료: {file_path}")
+                
+                
+                # 업로드 문서 chunk 분리
+                vector_store = None
+
+                if uploaded_documents:
+
+                    # chunk 분리
+                    split_docs = split_documents(uploaded_documents)
+
+                    print(f"chunk 생성 완료: {len(split_docs)}개")
+
+                    # 기존 vector_store 존재 시
+                    # 새 문서 merge
+                    if vector_store:
+
+                        vector_store = (
+                            add_documents_to_vector_store(vector_store,split_docs)
+                        )
+
+                        print("기존 VECTOR STORE 문서 merge 완료")
+
+                    # 기존 vector_store 없으면 새 생성
+                    else:
+                        vector_store = (create_vector_store(split_docs))
+
+                        print("새 VECTOR STORE 생성 완료")
+                    
+                    # 디스크에도 저장
+                    if room_id:
+                        save_local_vector_store(vector_store, room_id)
+                                        
+                    # room 기준 vector_store 저장
+                    if room_id:
+
+                        save_vector_store(room_id,vector_store)
+                        print(f"VECTOR STORE 저장 완료: room {room_id}")
+
+            except Exception as e:
+                print(f"문서 로드 실패: {e}")
+
+    # =========================
+    # 기존 vector_store 복구
+    # =========================
+
+    vector_store = None
+
+    if room_id:
+
+        # 1. RAM 메모리에서 먼저 조회
+        vector_store = get_vector_store(room_id)
+
+        if vector_store:
+
+            print(f"기존 VECTOR STORE 복구 완료: room {room_id}")
+
+        # 2. RAM에 없으면 디스크에서 복구 시도
+        if not vector_store:
+
+            vector_store = load_local_vector_store(room_id)
+
+            # 3. 디스크 복구 성공 시 RAM에도 다시 저장
+            if vector_store:
+
+                save_vector_store(
+                    room_id,
+                    vector_store
+                )
+
+                print(f"디스크 VECTOR STORE RAM 복구 완료: room {room_id}")
 
     # 로그인 사용자일 때만 기존 메시지 조회
     if user_id and room_id:
@@ -64,7 +199,16 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
     # 현재 학습 단계 반복 학습 가능 함수
     # =========================
 
-    if "다시" in message or "모르겠어" in message:
+    if (
+        (
+            "다시 설명" in message
+            or "모르겠어" in message
+            or "이해 안돼" in message
+            or "설명 다시" in message
+        )
+        and "문제" not in message
+        and "퀴즈" not in message
+    ):
         
         #임시 에러 대비 코드 추후에 삭제or변경
         if not user_id or not room_id:
@@ -96,22 +240,55 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
         current_step = curriculum[current_step_index]
         # 현재 사용자가 배우고 있는 step 데이터 가져오기
 
-        # 현재 step 강의 다시 생성
-        lecture = generate_step_lecture(
-            category=session.category,
-            topic=session.topic,
-            step=current_step,
-            level=session.level
+        # learning_flow_graph 실행용 state 생성
+        learning_state = {
+            "message": message,
+            "intent": "study",
+            "category": session.category,
+            "topic": session.topic,
+            "level": session.level,
+            "curriculum": curriculum,
+            "current_step": current_step,
+            "response": {},
+            "learning_intent": "",
+            "user_id": user_id,
+            "room_id": room_id,
+            "db": db,
+            "learning_status": session.learning_status,
+            "vector_store": vector_store
+            
+        }
+        
+        # learning_flow_graph 실행
+        learning_result = learning_flow_app.invoke(
+            learning_state
         )
-        # explain_service.py 파일(현재 step 기준 강의 생성 역할)의
-        # generate_step_lecture 함수 호출
-        # "다시", "모르겠어" 요청에서는 다음 단계로 이동하지 않고
-        # 현재 step 기준으로 강의를 다시 생성한다.
+
+        # Graph 생성 강의 결과 가져오기
+        lecture = learning_result["response"]
+        
 
 
-        # 로그인 사용자에 한해서만 AI 강의 응답을 chat_message 테이블에 저장
+        # lecture가 dict 구조인 경우
+        if isinstance(lecture, dict):
+
+            lecture_content = lecture["content"]
+
+        # 문자열인 경우
+        else:
+
+            lecture_content = lecture
+
+        # 로그인 사용자에 한해서만 AI 강의 응답 저장
         if user_id and room_id:
-            save_chat_message(db,user_id,room_id,"assistant",lecture["content"])
+
+            save_chat_message(
+                db,
+                user_id,
+                room_id,
+                "assistant",
+                lecture_content
+            )
 
         #========== progress(학습 진행도) 기능 ========
 
@@ -129,8 +306,12 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
 
         # 반환
         return {
+            "type": "lecture",
             "current_step": current_step,
-            "lecture": lecture,
+
+            "lecture": {
+                "content": lecture_content
+            },
             "progress": {
                 "current": current_step_number,
                 "total": total_steps,
@@ -158,12 +339,115 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
     # 현재 로그인 사용자의 학습 세션 조회
     session = get_study_session(db, user_id, room_id)
     
+    # =====================================
+    # 학습 일시정지 상태 검사
+    # =====================================
+
+    if session and session.learning_status == "paused":
+
+        # 사용자가 학습 재개 의도를 보낸 경우
+        resume_keywords = [
+            "다시 시작",
+            "다시시작",
+            "학습 다시 시작",
+            "이어",
+            "이어서",
+            "이어할게",
+            "이어할래",
+            "계속할게",
+            "계속",
+            "재개",
+            "다시 할게"
+        ]
+
+        if any(keyword in message for keyword in resume_keywords):
+
+            # 학습 상태 복구
+            session.learning_status = "learning"
+
+            db.commit()
+            db.refresh(session)
+            
+            # 현재 step 강의 다시 생성
+            lecture = generate_step_lecture(
+                category=session.category,
+                topic=session.topic,
+                step=session.current_step,
+                level=session.level,
+                message=message
+            )
+
+            # lecture가 dict 구조인 경우
+            if isinstance(lecture, dict):
+
+                lecture_content = lecture["content"]
+
+            # 문자열인 경우
+            else:
+
+                lecture_content = lecture
+
+            save_chat_message(
+                db,
+                user_id,
+                room_id,
+                "assistant",
+                lecture_content
+            )
+
+            return {
+                "message": "학습을 다시 시작합니다. 이전 학습 단계부터 이어서 진행할게요!",
+                "current_step": session.current_step,
+
+                "lecture": {
+                    "content": lecture_content
+                }
+            }
+
+        # 아직 재개 요청이 아닌 경우
+        return {
+            "message": (
+                "현재 학습이 일시정지 상태입니다.\n\n"
+                "학습을 다시 시작하려면:\n"
+                "- 다시 시작할게\n"
+                "- 이어서 할게\n"
+                "- 학습 재개\n\n"
+                "처럼 입력해주세요!."
+            )
+        }
+        
+    # =========================
+    # learning intent 분석
+    # =========================
+    learning_intent = None
+
+    # 현재 학습 session 존재 시에만 실행
+    if session:
+
+        current_step_title = session.current_step.get("title", "")
+
+        learning_response = (
+            learning_intent_chain.invoke({
+                "message": message,
+                "current_step": current_step_title
+            })
+        )
+
+        learning_intent = (
+            learning_response.content.strip()
+        )
+        
+        print("learning_intent:", learning_intent)
+    
     # 현재 퀴즈 진행 중인지 확인
     if session and session.quiz_answer_data:
         
         # "다음"은 퀴즈 답변이 아니라 다음 단계 이동 명령이므로
         # 아래 퀴즈 채점 로직으로 들어가지 않게 통과시킨다.
-        if message.strip() in ["다음", "다음 단계", "계속"]:
+        if (
+            message.strip() in ["다음", "다음 단계", "계속"]
+            or learning_intent == "next_step"
+        ):
             pass
         else:
             # 사용자 입력 답안 분리
@@ -199,12 +483,39 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
                         f"❌ Q{index + 1} 틀렸습니다.\n\n"
                         f"📘 해설:\n{explanation}"
                     )
+            # 최종 해설 메시지 생성
+            quiz_result_message = (
+                "\n\n---\n\n".join(result_messages)
+            )
+
             # 퀴즈 상태 초기화
             session.quiz_answer_data = None
+
             db.commit()
+
+            # =========================
+            # 퀴즈 결과 메시지 DB 저장
+            # =========================
+
+            if user_id and room_id:
+
+                save_chat_message(
+                    db,
+                    user_id,
+                    room_id,
+                    "assistant",
+                    json.dumps({
+                        "type": "quiz_result",
+                        "content": quiz_result_message
+                    }, ensure_ascii=False)
+                )
+
+            # 사용자 응답 반환
             return {
 
-                "message": "\n\n---\n\n".join(result_messages)
+                "type": "quiz_result",
+
+                "message": quiz_result_message
 
             }
 
@@ -212,7 +523,10 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
     # 다음 단계 요청 처리
     # =========================
 
-    if message.strip() in ["다음", "다음 단계", "계속"]:
+    if (
+        message.strip() in ["다음", "다음 단계", "계속"]
+        or learning_intent == "next_step"
+    ):
         
         if not user_id or not room_id:
             return {
@@ -227,10 +541,7 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
 
         # ===== 현재 로그인 사용자의 학습 상태 가져오기 =====
         session = get_study_session(db, user_id, room_id)
-        # session_service.py 파일(사용자 학습 상태를 DB에서 조회하는 역할)의
-        # get_study_session 함수 호출
-        # 이제 학습 상태는 study_session = {} 딕셔너리에서 가져오는 게 아니라,
-        # StudySession DB 테이블에서 현재 로그인 사용자(user_id) 기준으로 조회한다.
+        
 
 
         # ====== 학습 상태 존재 여부 예외처리 검사 ========
@@ -240,173 +551,333 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
             return {
                 "message": "먼저 학습하고 싶은 내용을 알려주세요."
             }
+            
+        # learning_flow_graph 실행용 state 생성
+        # 현재 DB에 저장된 학습 상태를 기반으로 learning_flow_graph 실행 준비
+        learning_state = {
+            "message": message,
+            "intent": "study",
+            "category": session.category,
+            "topic": session.topic,
+            "level": session.level,
+            "curriculum": session.curriculum,
+            "current_step": session.current_step,
+            "response": {},
+            "learning_intent": "",
+            "user_id": user_id,
+            "room_id": room_id,
+            "db": db,
+            "learning_status": session.learning_status,
+            "vector_store": vector_store
+        }
+        
+        # learning_flow_graph 실행
+        learning_result = learning_flow_app.invoke(learning_state)
+        
+        print(learning_result)
 
-        # ===== 현재 저장된 학습 상태 가져오기 =====
+        # Graph 결과에서 새 현재 step 가져오기
+        new_current_step = learning_result["current_step"]
 
-        curriculum = session.curriculum
-        # DB에 저장된 전체 커리큘럼 가져오기
-        # session은 딕셔너리가 아니라 StudySession ORM 객체이므로
-        # session["curriculum"]이 아니라 session.curriculum 방식으로 접근한다.
+        # Graph 결과에서 새 강의 가져오기
+        lecture = learning_result["response"]
 
+
+        # ===== 현재 step 완료 처리 =====
         current_step_index = session.current_step_index
-        # DB에 저장된 현재 학습 단계 index 가져오기
-        # index는 0부터 시작한다.
-        # 예: 0 = 첫 번째 단계, 1 = 두 번째 단계
 
-        curriculum[current_step_index]["completed"] = True
-        # 리스트 + 딕셔너리 접근
-        # curriculum[current_step_index] = 커리큘럼 리스트 안에서 현재 step 객체를 꺼냄
-        # ["completed"] = 현재 step 객체 안의 completed 값을 수정
-        # 사용자가 "다음"으로 넘어가면, 현재 단계는 학습 완료 처리한다.
+        session.curriculum[current_step_index]["completed"] = True
 
-        # =========== 다음 step 가져오기 ==============
-        next_step = get_next_step(
-            curriculum,
-            current_step_index
+
+        # ===== 새로운 step index 계산 =====
+        new_index = new_current_step["step"] - 1
+
+
+        # ===== DB 현재 step 저장 =====
+        update_step_index(
+            db,
+            user_id,
+            room_id,
+            new_index
         )
-        # curriculum_service.py 파일(현재 index 기준으로 다음 step을 계산하는 역할)의
-        # get_next_step 함수 호출
-        # 현재 위치 기준으로 다음 step 객체를 반환한다.
 
-        # 마지막 단계까지 완료한 경우
-        if next_step is None:
-            return {
-                "message": "모든 학습 단계를 완료했습니다."
-            }
+        update_current_step(
+            db,
+            user_id,
+            room_id,
+            new_current_step
+        )
 
-        #======== 현재 step 위치 업데이트 ==========
 
-        new_index = current_step_index + 1
-        # 현재 index에서 1을 더해서 다음 단계 index를 만든다.
+        # ===== progress 계산 =====
+        total_steps = len(session.curriculum)
 
-        update_step_index(db, user_id, room_id, new_index)
-        # session_service.py 파일(사용자 학습 단계 index를 DB에서 수정하는 역할)의
-        # update_step_index 함수 호출
-        # 현재 로그인 사용자의 current_step_index 값을 DB에 저장한다.
+        current_step_number = new_current_step["step"]
 
-        update_current_step(db, user_id, room_id, next_step)
-        # session_service.py 파일(현재 학습 step 객체를 DB에서 수정하는 역할)의
-        # update_current_step 함수 호출
-        # 현재 로그인 사용자의 current_step 값을 next_step으로 DB에 저장한다.
-
-        #========== progress(학습 진행도) 기능 ========
-
-        total_steps = len(curriculum)
-        # 전체 커리큘럼 단계 수 계산
-
-        current_step_number = new_index + 1
-        # 사용자에게 보여줄 현재 단계 번호 계산
-        # index는 0부터 시작하지만, 사용자에게는 1단계부터 보여줘야 하므로 +1
-
-        progress_percent = int((current_step_number / total_steps) * 100)
-        # 진행률 퍼센트 계산
-        # (현재 단계 번호 / 전체 커리큘럼 단계 수) * 100
+        progress_percent = int(
+            (current_step_number / total_steps) * 100
+        )
 
         session.progress = progress_percent
-        # 현재 로그인 사용자의 progress 값을 수정
-        # 이 시점에서는 ORM 객체 값만 바뀐 상태이고,
-        # 실제 DB 저장은 아래 db.commit()에서 확정된다.
-
         db.commit()
-        # progress 수정 내용을 실제 DB에 저장
-
         db.refresh(session)
-        # DB에 저장된 최신 상태를 다시 session 객체에 반영
 
-        print(new_index)
-        # 테스트용 단계 저장 출력 코드
-        # 나중에 실제 서비스 단계에서는 제거 가능
-
-        #========= 다음 step 강의 생성 =============
-        lecture = generate_step_lecture(
-            category=session.category,
-            topic=session.topic,
-            step=next_step,
-            level=session.level
-        )
-        # explain_service.py 파일(현재 step 기준 강의 생성 역할)의
-        # generate_step_lecture 함수 호출
-        # DB에서 가져온 category/topic/level과 다음 step을 이용해서 GPT 강의를 생성한다.
-
-        #AI 강의 응답을 chat_message 테이블에 저장 ,로그인 사용자에 한해서만
+        # ===== AI 강의 저장 =====
         if user_id and room_id:
-            
-           save_chat_message(db,user_id,room_id,"assistant",lecture["content"])
-    
-    
-        #========= light_quiz 모드 퀴즈 생성 =============
-        quiz = None
-        # 기본값은 None
-        # free 모드에서는 퀴즈를 생성하지 않음
 
-        print("현재 session.study_mode:", session.study_mode)
-        
-        if session.study_mode == "light_quiz":
-            quiz_result = generate_quiz(db, user_id, room_id)
-            quiz = quiz_result["quiz_for_user"]
-            session.quiz_answer_data = quiz_result["quiz_answer_data"]
-            db.commit()
-            
-            quiz_text_parts = []
-            
-            for index,quiz_item in enumerate(quiz):
-                
-                choices_text = ""
-                
-                for choice_index, choice in enumerate(quiz_item["choices"]):
-                    choices_text += f"({choice_index + 1}) {choice}\n\n"
-
-                quiz_block = (
-                    f"---\n"
-                    f"## 📝 학습 확인 퀴즈 {index + 1}\n\n"
-                    f"{quiz_item['question']}\n\n"
-                    f"{choices_text}"
-                )
-                
-                quiz_text_parts.append(quiz_block)
-            
-            quiz_intro = (
-                "📝 이번 챕터에서 배운 내용을 "
-                "간단한 퀴즈로 체크해보세요!\n\n"
-
-                "답변 예시:\n"
-                "- 1,2\n"
-                "- 1번, 2번\n\n"
-            )
-
-            quiz_text = quiz_intro + "\n".join(quiz_text_parts)
-                        
             save_chat_message(
                 db,
                 user_id,
                 room_id,
                 "assistant",
-                quiz_text
+                lecture["content"]
             )
-                
-        # 최종 반환
+
+        # ===== Graph 기반 응답 반환 =====
         return {
-            "current_step": next_step,
+            "type": "lecture",
+            "current_step": new_current_step,
             "lecture": lecture,
-            "quiz": quiz,
             "progress": {
                 "current": current_step_number,
                 "total": total_steps,
                 "percent": progress_percent
             }
         }
+    # =====================================
+    # learning_intent 기반 graph 처리
+    # =====================================
+
+    if learning_intent in [
+        "pause_learning",
+        "finish_learning",
+        "review",
+        "continue_learning",
+        "unknown_intent"
+    ]:
+        learning_state = {
+            "message": message,
+            "intent": "study",
+            "category": session.category,
+            "topic": session.topic,
+            "level": session.level,
+            "curriculum": session.curriculum,
+            "current_step": session.current_step,
+            "response": {},
+            "learning_intent": learning_intent,
+            "user_id": user_id,
+            "room_id": room_id,
+            "db": db,
+            "learning_status": session.learning_status,
+            "vector_store": vector_store
+        }
+
+        # learning_flow_graph 실행
+        learning_result = (
+            learning_flow_app.invoke(
+                learning_state
+            )
+        )
+
+        response_message = learning_result["response"]
+
+        # response가 dict 구조인 경우
+        if isinstance(response_message, dict):
+
+            message_content = response_message["content"]
+
+        # 문자열인 경우
+        else:
+            message_content = response_message
+            
+        # AI 응답 저장
+        if user_id and room_id:
+
+            save_chat_message(
+                db,
+                user_id,
+                room_id,
+                "assistant",
+                message_content
+            )
+
+        # dict 응답이면 그대로 반환
+        if isinstance(response_message, dict):
+
+            return {
+                "type": "lecture",
+                "lecture": response_message
+            }
+
+        # 문자열 응답이면 lecture 구조로 감싸기
+        return {
+            "lecture": {
+                "content": response_message
+            }
+        }
     
-    
-    
-    # =========================
-    # 일반 intent 분석
-    # =========================
 
     intent = analyze_intent(message)
     # llm_service.py 파일(사용자 입력 의도 분석 역할)의 analyze_intent 함수 호출
     # study / explain / quiz / chat 중 어떤 요청인지 판단한다.
+    
+    
+    # 업로드 문서 존재 시
+    # document intent 분석 우선 처리
+    if vector_store:
+
+        intent = analyze_document_intent(message)
+
+        print("DOCUMENT RAG MODE ENABLED")
+
 
     print("intent:", intent)
+    
+    # =========================
+    # document_chat 요청
+    # 업로드 문서 기반 RAG 응답
+    # =========================
+
+    if intent == "document_chat":
+
+        document_state = {
+            "message": message,
+            "intent": "document_chat",
+            "category": "",
+            "topic": "",
+            "level": "",
+            "curriculum": [],
+            "current_step": {},
+            "response": {},
+            "learning_intent": "document_chat",
+            "vector_store": vector_store,
+            "user_id": user_id,
+            "room_id": room_id,
+            "db": db,
+            "learning_status": ""
+        }
+
+        document_result = learning_flow_app.invoke(document_state)
+
+        response = document_result["response"]
+
+        if user_id and room_id:
+            save_chat_message(
+                db,
+                user_id,
+                room_id,
+                "assistant",
+                response["content"]
+            )
+
+        return {
+            "type": "document_chat",
+            "lecture": {
+                "content": response["content"]
+            }
+        }
+    # =========================
+    # document_study 요청
+    # 문서 기반 AI 학습 시작
+    # =========================
+
+    if intent == "document_study":
+
+        print("DOCUMENT STUDY MODE")
+
+        # 문서 retrieval
+        related_docs = search_similar_documents(
+            vector_store,
+            message
+        )
+
+        # retrieval text 합치기
+        context = "\n\n".join([
+            doc.page_content
+            for doc in related_docs
+        ])
+
+        print("===== DOCUMENT CURRICULUM CONTEXT =====")
+        print(context)
+        print("======================================")
+
+        # 문서 기반 curriculum 생성
+        curriculum_text = (
+            generate_document_curriculum(
+                context
+            )
+        )
+
+        print("===== DOCUMENT CURRICULUM =====")
+        print(curriculum_text)
+        print("================================")
+
+        # 기존 curriculum 구조 변환
+        curriculum = parse_curriculum(
+            curriculum_text
+        )
+
+        # 첫 step 설정
+        current_step_index = 0
+
+        current_step = curriculum[
+            current_step_index
+        ]
+
+        
+
+        # 문서 기반 첫 step 강의 직접 생성
+        response = generate_step_lecture(
+            category="문서 기반 학습",
+            topic=current_step["title"],
+            step=current_step,
+            level="초급",
+            message=message,
+            vector_store=vector_store
+        )
+
+        response_content = response["content"]
+
+        
+        # 학습 세션 저장
+        save_study_session(
+            db=db,
+            user_id=user_id,
+            room_id=room_id,
+            category="문서 기반 학습",
+            topic=current_step["title"],
+            level="초급",
+            curriculum=curriculum,
+            current_step_index=0,
+            current_step=current_step,
+            study_mode=study_mode,
+            learning_status="learning"
+        )
+
+        # AI 응답 저장
+        save_chat_message(
+            db,
+            user_id,
+            room_id,
+            "assistant",
+            response_content
+        )
+
+        return {
+            "type": "document_study",
+
+            "current_step": current_step,
+
+            "lecture": response,
+
+            "progress": {
+                "current": 1,
+                "total": len(curriculum),
+                "percent": int((1 / len(curriculum)) * 100)
+            }
+        }
+        
+    
 
     # =========================
     # study 요청
@@ -438,86 +909,88 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
                     }
                 ]
             }
+            
 
         # =========================
         # 학습 시작 처리
         # =========================
-
-        study_result = start_study_service(
+        
+        # LangGraph 실행용 초기 state 생성
+        initial_state = {
+            "message": message,
+            "intent": intent,
+            "category": "",
+            "topic": "",
+            "level": "",
+            "curriculum": [],
+            "current_step": {},
+            "response": {},
+            "learning_intent": "",
+            "vector_store": vector_store
+        }
+        
+        # study_graph 실행
+        graph_result = study_graph_app.invoke(initial_state)
+        
+        print(graph_result)
+        
+        # Graph 결과 데이터 꺼내기 , GraphState 안에 저장된 결과들을 실제 서비스에서 사용 가능하게 꺼내는 단계
+        category = graph_result["category"]
+        topic = graph_result["topic"]
+        level = graph_result["level"]
+        curriculum = graph_result["curriculum"]
+        current_step = graph_result["current_step"]
+        response = graph_result["response"]
+        
+        if isinstance(response, str):
+            response = {
+                "type": "step_lecture",
+                "content": response
+            }
+        
+        # Graph 결과 기반 학습 상태 저장
+        save_study_session(
             db=db,
-            # 현재 DB 연결 전달
-
             user_id=user_id,
-            # JWT 인증으로 확인된 현재 로그인 사용자 id 전달
-
             room_id=room_id,
-            
-            message=message,
-            # 사용자 입력 메시지 전달
-
-            study_mode=study_mode
-            # 사용자가 선택한 학습 모드 전달
+            category=category,
+            topic=topic,
+            level=level,
+            curriculum=curriculum,
+            current_step_index=0,
+            current_step=current_step,
+            study_mode=study_mode,
+            learning_status="learning"
         )
-        # curriculum_service.py 파일(학습 시작 처리 역할)의
-        # start_study_service 함수 호출
-        # category/topic/level 분석, 커리큘럼 생성, 첫 강의 생성,
-        # 그리고 StudySession DB 저장까지 이어진다.
         
-        #=======================
-        # AI 강의 응답 저장
-        #=======================
-        
-        if "lecture" in study_result and user_id and room_id:
-            #사용자가 로그인했을 시에 lecture 가 있을 때만 AI강의 내용을 저장, lecture가 없으면 저장하지 않고 그냥 반환
-            save_chat_message( #lecture = ai가 생성한 강의 내용
+        # Graph 생성 강의 DB 저장
+        if user_id and room_id:
+
+            save_chat_message(
                 db,
                 user_id,
                 room_id,
                 "assistant",
-                study_result["lecture"]["content"]
+                response["content"]
             )
-            
-            # 퀴즈 내용도 DB 저장
-            if study_result.get("quiz") and user_id and room_id:
-
-                quiz_text_parts = []
-
-                for index, quiz in enumerate(study_result["quiz"]):
-
-                    choices_text = ""
-
-                    for choice_index, choice in enumerate(quiz["choices"]):
-                        choices_text += f"({choice_index + 1}) {choice}\n\n"
-
-                    quiz_block = (
-                        f"---\n"
-                        f"## 📝 학습 확인 퀴즈 {index + 1}\n\n"
-                        f"{quiz['question']}\n\n"
-                        f"{choices_text}"
-                    )
-
-                    quiz_text_parts.append(quiz_block)
-
-                quiz_intro = (
-                    "📝 이번 챕터에서 배운 내용을 "
-                    "간단한 퀴즈로 체크해보세요!\n\n"
-
-                    "답변 예시:\n"
-                    "- 1,2\n"
-                    "- 1번, 2번\n\n"
-                )
-
-                quiz_text = quiz_intro + "\n".join(quiz_text_parts)
-
-                save_chat_message(
-                        db,
-                        user_id,
-                        room_id,
-                        "assistant",
-                        quiz_text
-                )
         
-        return study_result
+                
+        # Graph 기반 응답 구조 생성
+        graph_study_result = {
+            "type": "lecture",
+            "current_step": current_step,
+            "lecture": response,
+            "progress": {
+                "current": 1,
+                "total": len(curriculum),
+                "percent": int((1 / len(curriculum)) * 100)
+            }
+        }
+        print(graph_study_result)
+                
+        return graph_study_result
+    
+    
 
     # explain 요청
     elif intent == "explain":
@@ -535,16 +1008,69 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None):
             )
 
         return {
+            "type": "lecture",
             "lecture": response
         }
 
 
     # quiz 요청
     elif intent == "quiz":
-        return {
-            "lecture": {
-                "content": "퀴즈 기능 준비중"
+
+        # 학습 session 없는 경우
+        if not session:
+            return {
+                "type": "info",
+                "lecture": {
+                    "content":
+                    "현재 진행 중인 학습이 없습니다.\n\n"
+                    "먼저 학습을 시작해주세요!"
+                }
             }
+
+        # 현재 step 기준 퀴즈 생성
+        quiz_result = generate_quiz(
+            category=session.category,
+            topic=session.topic,
+            step=session.current_step,
+            level=session.level
+        )
+
+        # 퀴즈 생성 실패 예외 처리
+        if isinstance(quiz_result, str):
+
+            return {
+                "type": "info",
+                "lecture": {
+                    "content": quiz_result
+                }
+            }
+
+        # 정답 데이터 DB 저장
+        session.quiz_answer_data = (
+            quiz_result["quiz_answer_data"]
+        )
+
+        db.commit()
+        
+        # 퀴즈 메시지 DB 저장
+        if user_id and room_id:
+
+            save_chat_message(
+                db,
+                user_id,
+                room_id,
+                "assistant",
+                json.dumps({
+                    "type": "quiz",
+                    "quiz": quiz_result["quiz_for_user"]
+                }, ensure_ascii=False)
+            )
+                
+        
+        # 사용자용 퀴즈 반환
+        return {
+            "type": "quiz",
+            "quiz": quiz_result["quiz_for_user"]
         }
 
     # 일반 대화

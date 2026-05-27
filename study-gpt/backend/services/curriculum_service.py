@@ -24,6 +24,7 @@ from services.session_service import save_study_session, get_study_session
 from services.quiz_service import generate_quiz
 from services.chat_message_service import get_chat_messages
 
+
 #====================================================
 
 
@@ -138,16 +139,18 @@ def start_study_service(
         curriculum=curriculum,
         current_step_index=current_step_index,
         current_step=current_step,
-        study_mode=study_mode
+        study_mode=study_mode,
+        learning_status="learning"
     )
-        
+    
     
     # 10.첫 번쨰 단계 강의 생성 
     first_lecture = generate_step_lecture(
         category=category,
         topic=topic,
         step=current_step,
-        level=level
+        level=level,
+        message=message
         # 현재 과목, 전체 주제, 첫 번째 커리큘럼 단계, 난이도를 넘겨서 첫 번째 단계 강의 생성.
         # 현재 step를 기반으로, 실제 강의를 생성하는 기능
     )
@@ -206,25 +209,37 @@ def start_study_service(
 
 
 # 2. 생성된 데이터를 서비스용 구조로 가공하는 함수
-#   단순 문자열 리스트 -> step 객체 리스트로 변환
+# 문자열 curriculum -> step 객체 리스트 변환
 def parse_curriculum(curriculum):
-    
+
     steps = []
-    
-    for index, line in enumerate(curriculum): 
-        #line 안에 있는 줄들을 하나씩 꺼내는 반복문
-        #enumerate() = 반복하면서 번호까지 같이 꺼내주는 함수.
-        
+
+    # 문자열이면 줄 단위 분리
+    if isinstance(curriculum, str):
+
+        curriculum = curriculum.split("\n")
+
+    for index, line in enumerate(curriculum):
+
         clean_line = line.strip()
-        
-        if clean_line: #빈 줄이 아닌 경우메나 실행
-            step_data = {
-                "step" : index + 1, #현재 반복 순서(index)에 1을 더해서 단계 번호(step)로 저장
-                "title" : clean_line,
-                "completed" : False #학습 완료 전이니 False              
-            }
-            steps.append(step_data)
-            
+
+        # 빈 줄 제거
+        if not clean_line:
+            continue
+
+        # "1. 제목" 형태 처리
+        if ". " in clean_line:
+
+            clean_line = clean_line.split(". ", 1)[1]
+
+        step_data = {
+            "step": index + 1,
+            "title": clean_line,
+            "completed": False
+        }
+
+        steps.append(step_data)
+
     return steps
 
 # 3. 현재 위치를 다음 위치로 이동시키는 함수

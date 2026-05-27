@@ -46,9 +46,48 @@ export default function ChatInput({
   // 입력창 값 저장 state
   const [message, setMessage] = useState("");
 
+  // 업로드 파일 state
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+
   // 현재 선택된 학습 모드 저장 state
   //const [selectedMode, setSelectedMode] = useState("free");
 
+
+  //=====================================
+  // 파일 업로드 처리
+  //=====================================
+
+  // 파일 drag & drop 처리
+  const handleDrop = (e) => {
+
+    e.preventDefault();
+
+    const files = Array.from(e.dataTransfer.files);
+
+    setUploadedFiles((prev) => [
+      ...prev,
+      ...files
+    ]);
+  };
+
+
+  // drag 중 기본 이벤트 방지
+  const handleDragOver = (e) => {
+
+    e.preventDefault();
+
+  };
+
+
+  // 업로드 파일 제거
+  const removeFile = (indexToRemove) => {
+
+    setUploadedFiles((prev) =>
+      prev.filter((_, index) =>
+        index !== indexToRemove
+      )
+    );
+  };
 
   //=====================================
   // 메시지 전송 함수
@@ -69,7 +108,13 @@ export default function ChatInput({
     const tempMessage = {
       id: Date.now(),
       role: "user",
-      content: message
+      content: message,
+
+      // 업로드 파일 정보 저장
+      files: uploadedFiles.map((file) => ({
+        name: file.name,
+        type: file.type
+      }))
     };
 
     // 입력창 즉시 초기화
@@ -133,34 +178,64 @@ export default function ChatInput({
     setMessages((prev) => [...prev,loadingMessage]);
 
     //=====================================
-    // backend AI 요청
+    // FormData 생성
     //=====================================
-    // agent 요청 데이터 생성
 
-    const requestData = {
+    const formData = new FormData();
 
-      message: message,
+    formData.append(
+      "message",
+      message
+    );
 
-      study_mode: studyMode
-    };
-    
-    // 로그인 상태일 때만 room_id 추가
+    formData.append(
+      "study_mode",
+      studyMode
+    );
+
+
+    // room_id 존재 시 추가
     if (currentRoom?.id) {
 
-      requestData.room_id = currentRoom.id;
+      formData.append(
+        "room_id",
+        currentRoom.id
+      );
     }
 
+    // 업로드 파일 추가
+    uploadedFiles.forEach((file) => {
+
+      formData.append(
+        "files",
+        file
+      );
+
+    });
+
+    // 전송 즉시 업로드 preview 제거
+    setUploadedFiles([]);
+
+    
     try {
+      const response = await api.post(
+        "/agent",
+        formData,
+        {
+          headers: {
+            "Content-Type":
+              "multipart/form-data"
+          }
+        }
 
-      
+      );
 
-      const response = await api.post("/agent", requestData);
+      const responseType = response.data?.type;
 
-     
-      // agent_service에서 채팅방 제목이 자동 변경되었을 수 있으므로
-      // RoomList를 다시 조회시킴
+      console.log("응답 타입:", responseType);
+
+      // agent_service에서 채팅방 제목이 자동 변경되었을 수 있으므로 RoomList를 다시 조회시킴
       setRoomRefreshTrigger((prev) => prev + 1);
-
 
       // assistant 메시지 배열 생성
       const newMessages = [];
@@ -268,7 +343,7 @@ export default function ChatInput({
 
   return (
 
-    <div className="mt-6">
+    <div className="mt-6" onDrop={handleDrop} onDragOver={handleDragOver}>
 
       {/* 전체 입력 박스 */}
       <div className="
@@ -283,6 +358,71 @@ export default function ChatInput({
         rounded-[2rem]
         p-4
       ">
+
+        {/* 업로드 파일 미리보기 */}
+        {uploadedFiles.length > 0 && (
+
+          <div className="
+            flex
+            gap-3
+            mb-4
+            flex-wrap
+          ">
+
+            {uploadedFiles.map((file, index) => (
+
+              <div
+                key={index}
+
+                className="
+                  relative
+                  bg-zinc-800
+                  border
+                  border-zinc-700
+                  rounded-2xl
+                  px-4
+                  py-3
+                  text-sm
+                  text-white
+                  min-w-[120px]
+                  max-w-[220px]
+                "
+              >
+
+                {/* 제거 버튼 */}
+                <button
+                  onClick={() => removeFile(index)}
+
+                  className="
+                    absolute
+                    -top-2
+                    -right-2
+
+                    w-6
+                    h-6
+
+                    rounded-full
+                    bg-white
+                    text-black
+                    text-xs
+                    font-bold
+                  "
+                >
+                  ✕
+                </button>
+
+                {/* 파일 이름 */}
+                <div className="truncate">
+                  {file.name}
+                </div>
+
+              </div>
+
+            ))}
+
+          </div>
+
+        )}
 
         {/* 실제 메시지 입력창 */}
         <textarea //여러 줄 입력 기능
