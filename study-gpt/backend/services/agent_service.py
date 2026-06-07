@@ -339,15 +339,18 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None, fi
 
         return {
             "lecture": {
-            "content": f"""
-            현재는 비로그인 상태입니다.
+                "content": """
+        🔒 비로그인 상태입니다.
 
-            '{message}' 요청을 확인했습니다.
+        Study GPT의 AI 학습 기능은 로그인 후 사용할 수 있습니다.
 
-            로그인하면 학습 기록 저장, 채팅방 저장, 이어하기 기능을 사용할 수 있습니다.
-            """
+        로그인하면 다음 기능을 사용할 수 있습니다.
+
+        - 학습 기록 저장
+        - 채팅방 저장
+        - 이어서 학습
+        """
             }
-        
         }
         
     # 현재 로그인 사용자의 학습 세션 조회

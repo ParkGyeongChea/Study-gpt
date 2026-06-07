@@ -220,14 +220,19 @@ export default function ChatMessages({
               className="
                 w-full
                 max-w-4xl
-                text-black
-                dark:text-white
+
+                text-zinc-200
+                text-base
                 leading-8
+
                 prose
                 prose-invert
-                prose-p:my-6
-                prose-headings:mt-10
-                prose-headings:mb-6
+                prose-p:my-3
+                prose-p:leading-8
+                prose-ul:my-3
+                prose-li:my-1
+                prose-headings:mt-8
+                prose-headings:mb-4
                 prose-h1:text-3xl
                 prose-h1:font-bold
                 prose-h2:text-2xl
@@ -238,7 +243,6 @@ export default function ChatMessages({
                 prose-headings:border-zinc-800
                 prose-headings:pb-3
                 prose-strong:text-white
-                prose-li:my-2
                 prose-pre:rounded-2xl
                 prose-pre:p-0
               "
@@ -441,7 +445,14 @@ export default function ChatMessages({
                         ) : (
 
                           <code
-                            className="bg-zinc-800 px-1 py-0.5 rounded"
+                            className="
+                              bg-transparent
+                              px-0
+                              py-0
+                              rounded-none
+                              text-inherit
+                              font-inherit
+                            "
                             {...props}
                           >
                             {children}
