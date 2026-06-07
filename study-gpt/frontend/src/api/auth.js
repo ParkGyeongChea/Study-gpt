@@ -12,7 +12,7 @@ import axios from "axios";
 
 // FastAPI 서버 주소
 const API = axios.create({
-  baseURL: "http://localhost:8000",
+  baseURL: "https://study-gpt-backend.onrender.com",
 });
 
 

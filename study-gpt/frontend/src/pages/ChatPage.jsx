@@ -440,7 +440,7 @@ export default function ChatPage() {
                         try {
                           // 백엔드 side-chat API 요청
                           const response = await fetch(
-                            "http://localhost:8000/side-chat",
+                            "https://study-gpt-backend.onrender.com",
                             {
                               method: "POST",
 

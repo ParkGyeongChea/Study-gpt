@@ -15,7 +15,7 @@ function SettingsModal({ onClose }) {
     const token = localStorage.getItem("token");
 
     // 회원탈퇴 API 요청 (DELETE /users/me 요청)
-    await axios.delete("http://localhost:8000/users/me",
+    await axios.delete("https://study-gpt-backend.onrender.com",
       {headers: { Authorization: `Bearer ${token}`}}); 
 
 
