@@ -24,8 +24,8 @@ from services.graph.nodes.unknown_intent_node import unknown_intent_node
 from services.graph.routes.learning_route import route_learning_flow
 
 
-# 1.GraphState 기반 LangGraph 생성
-graph = StateGraph(GraphState) #learning_flow_graph 전용 상태 흐름 생성
+# 1.GraphState 기반 LangGraph 생성 
+graph = StateGraph(GraphState) 
 
 
 # 2.node 등록
@@ -44,7 +44,6 @@ graph.add_node("unknown_intent_node", unknown_intent_node)
 
 # 3.Entry point 설정
 graph.set_entry_point("learning_intent_node")
-#사용자 후속 입력 -> learning_intent_node 분석부터 시작
 
 
 # 4.Conditional Route
@@ -52,7 +51,6 @@ graph.add_conditional_edges(
     "learning_intent_node",
     route_learning_flow
 )
-# learning_intent_node 실행 -> state["learning_intent"] 생성 -> route_learning_flow(state) -> 다음 node 자동 결정
 
 
 # 5. Edge 연결
@@ -71,7 +69,3 @@ graph.add_edge("document_chat_node", END)
 # 6.copile
 app = graph.compile()
 
-
-
-#실행 명령 (백엔드 폴더 위치에서)
-#python -m services.graph.learning_flow_graph

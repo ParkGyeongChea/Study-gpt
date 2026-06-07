@@ -4,27 +4,18 @@
 
 
 from langchain_community.document_loaders import PyPDFLoader
-
 from langchain_core.documents import Document
-
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-#랭체인에서 제공하는 문서 자동 chunk 분리기
-
 from langchain_openai import OpenAIEmbeddings
-#OpenAIEmbeddings = 텍스트를 embedding 벡터로 변환
-
 from langchain_community.vectorstores import FAISS
-#FAISS = 벡터 저장+유사도 검색 엔진
 
 import os
 
 # PDF 문서 로딩 함수
 def load_pdf(file_path: str):
 
-    # PDF 로더 생성
     loader = PyPDFLoader(file_path)
 
-    # PDF 문서 읽기, PDF 내용을 LangChain Document 객체 리스트로 변환.
     documents = loader.load()
 
     return documents
@@ -32,11 +23,10 @@ def load_pdf(file_path: str):
 # TXT 문서 로딩 함수
 def load_txt(file_path: str):
 
-    # TXT 파일을 UTF-8 인코딩으로 읽음
+   
     with open(file_path, "r", encoding="utf-8") as file:
         text = file.read()
 
-    # TXT 내용을 LangChain Document 객체 리스트로 변환
     documents = [
         Document(page_content=text)
     ]
@@ -47,13 +37,8 @@ def load_txt(file_path: str):
 # 문서를 작은 chunk로 분리하는 함수
 def split_documents(documents):
 
-    # Text Splitter 생성
     text_splitter = RecursiveCharacterTextSplitter(
-
-        # chunk 최대 길이
         chunk_size=1200,
-
-        # chunk 간 겹치는 문자 수
         chunk_overlap=200
     )
 
@@ -89,35 +74,27 @@ def search_similar_documents(vector_store, query: str):
 
     return docs
 
-# =========================
+
 # FAISS vector_store 저장
-# =========================
 
 def save_local_vector_store(vector_store,room_id: int):
 
-    # 저장 경로 생성
     save_path = (f"vectorstores/room_{room_id}")
 
-    # 폴더 없으면 생성
     os.makedirs(save_path,exist_ok=True)
 
     # FAISS 저장
     vector_store.save_local(save_path)
-    #save_local = 이제 FAISS index, embedding metadata 전부 vectorstores/room_3/안에 저장
-
+   
     print(f"VECTOR STORE 디스크 저장 완료: {save_path}")
 
-
-# =========================
 # 저장된 FAISS 불러오기
-# =========================
+
 
 def load_local_vector_store(room_id: int):
 
-    # 저장 경로
     load_path = (f"vectorstores/room_{room_id}")
 
-    # 저장된 vector_store 없으면 종료
     if not os.path.exists(load_path):
 
         print("저장된 VECTOR STORE 없음")
@@ -134,10 +111,8 @@ def load_local_vector_store(room_id: int):
 
     return vector_store
 
-# =========================
-# 기존 vector_store에
-# 새 문서 chunk 추가
-# =========================
+
+# 기존 vector_store에 새 문서 chunk 추가
 
 def add_documents_to_vector_store(vector_store,split_docs):
 

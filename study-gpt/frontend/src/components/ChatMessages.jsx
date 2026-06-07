@@ -1,29 +1,16 @@
 //ChatMessages.jsx
 
 // 현재 선택한 room의 이전 대화 출력 컴포넌트
-
-
 // React 기본 기능 import
-//useRef = 특정 HTML 위치 기억하는 리액트 기능
+
 import { useEffect, useRef, useState } from "react";
-
-//react markdown 기능 추가
 import ReactMarkdown from "react-markdown";
-
-//incide-react에서 복사 아이콘 복사 완료 체크 아이콘 가져옴
 import { Copy, Check } from "lucide-react";
-
-//SyntaxHighlighter = 코드블럭 꾸며서 출력하는 컴포넌트
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-
-//oneDark = GPT 느낌 나는 다크 테마 스타일
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-
-// backend API 요청 객체 import
 import api from "../api/api";
 
 
-// ChatMessages 컴포넌트
 export default function ChatMessages({
 
   selectedRoom,
@@ -33,19 +20,15 @@ export default function ChatMessages({
   isLoading
 }) {
 
-  // 맨 아래 위치 추적 ref
-  const bottomRef = useRef(null);
 
-  // 복사 , 복사 완료 상태 추가
+  const bottomRef = useRef(null);
   const [copied, setCopied] = useState(false);
 
-  // selectedRoom 또는 refreshTrigger 변경 시 실행
+  
   useEffect(() => {
 
-    // room 없으면 중지
-  if (!selectedRoom) return;
 
-  // 현재 messages 이미 있으면 fetch 안 함
+  if (!selectedRoom) return;
   if (messages.length > 0) return;
 
   fetchMessages();
@@ -55,11 +38,10 @@ export default function ChatMessages({
   // 새 메시지 생성 시 자동 스크롤
   useEffect(() => {
     bottomRef.current?.scrollIntoView({
-      //scrollIntoView = 해당 위치까지 이동
-      behavior: "smooth" //부드럽게 스크롤
+      
+      behavior: "smooth" 
     });
-  }, [messages]); // 메시지 변경될 때마다, 메시지 위치인 맨 아래로 부드럽게 스크롤
-
+  }, [messages]); 
 
   // backend 메시지 조회 함수
   const fetchMessages = async () => {
@@ -258,10 +240,8 @@ export default function ChatMessages({
                   parsedContent = null;
                 }
 
-                // =========================
+                
                 // quiz 타입 메시지
-                // =========================
-
                 if (parsedContent?.type === "quiz") {
 
                   return (
@@ -306,10 +286,8 @@ export default function ChatMessages({
                   );
                 }
 
-                // =========================
+   
                 // quiz_result 타입 메시지
-                // =========================
-
                 if (parsedContent?.type === "quiz_result") {
 
                   return (
@@ -326,10 +304,8 @@ export default function ChatMessages({
                   );
                 }
 
-                // =========================
-                // 일반 markdown 메시지
-                // =========================
 
+                // 일반 markdown 메시지
                 return (
 
                   <ReactMarkdown

@@ -2,90 +2,50 @@
 // RoomList, ChatMessages, ChatInput 전부 조립하는 부모 페이지
 
 //====================================
-
-// React 상태(state) 기능 import
 import { useState, useEffect } from "react";
-
-// 채팅방 목록 컴포넌트 import
 import RoomList from "../components/RoomList";
-
-// 이전 대화 출력 컴포넌트 import
 import ChatMessages from "../components/ChatMessages";
-
-// 메시지 입력 컴포넌트 import
 import ChatInput from "../components/ChatInput";
-
 import { useNavigate } from "react-router-dom";
 
 
 export default function ChatPage() {
 
   const navigate = useNavigate();
-  
-  // 현재 로그인 토큰 가져오기
   const token = localStorage.getItem("token");
-
-  // 현재 선택된 room 저장 state
   const [selectedRoom, setSelectedRoom] = useState(null);
-
-  // 현재 선택된 학습 모드 저장 state
   const [studyMode, setStudyMode] = useState("free");
-
-  // 메시지 새로고침용 state
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  // 현재 room의 메시지 저장 state
   const [messages, setMessages] = useState([]);
-
-  // 사이드챗 메시지 저장 state
   const [sideMessages, setSideMessages] = useState(() => {
 
-    // 브라우저에 저장된 sidechat 기록 불러오기
+    
     const savedMessages = localStorage.getItem("sideMessages");
 
-    // 저장 데이터 있으면 JSON 변환
     return savedMessages
       ? JSON.parse(savedMessages)
       : [];
 
   });
 
-  // 사이드챗 입력창 state
-  const [sideInput, setSideInput] = useState("");
-
-  // 사이드챗 로딩 상태
-  const [isSideLoading, setIsSideLoading] = useState(false);
-
-  // AI 응답 로딩 상태
-  const [isLoading, setIsLoading] = useState(false);
-
-  // room 목록 새로고침 trigger state
-  const [roomRefreshTrigger, setRoomRefreshTrigger] = useState(0);
-
-  // 왼쪽 사이드바 열림 여부 state
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
-  //오른쪽 사이드바 열림 여부 state
-  const [isSideChatOpen, setIsSideChatOpen] = useState(false);
-
   
-
-  //오른쪽 사이드바 
+  const [sideInput, setSideInput] = useState("");
+  const [isSideLoading, setIsSideLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [roomRefreshTrigger, setRoomRefreshTrigger] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSideChatOpen, setIsSideChatOpen] = useState(false);
   const [showSideChatContent, setShowSideChatContent] = useState(true);
-
-  //채팅방 첫 진입 시 사이드바는 무조건 닫힌 상태
   const handleSetSelectedRoom = (room) => {
-
-    // 채팅방 이동 시 sidechat 강제 닫기
+    
     setIsSideChatOpen(false);
 
-    // room 변경
+    
     setSelectedRoom(room);
 
   };
 
-  //오른쪽 사이드바 효과
-
+  
   useEffect(() => {
 
     if (isSideChatOpen) {
@@ -101,7 +61,7 @@ export default function ChatPage() {
 
   }, [isSideChatOpen]);
 
-  // sideMessages 변경 시 localStorage 자동 저장
+  
   useEffect(() => {
 
     localStorage.setItem(

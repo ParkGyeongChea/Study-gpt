@@ -2,39 +2,25 @@
 // 설정 창 담당 컴포넌트
 
 import { useEffect, useState } from "react";
-
-//axios 백엔드 api 요청 라이브러리 가져오기
 import axios from "axios";
-
-//JWT 토큰 삭제 함수 가져오기
 import { removeToken } from "../utils/auth";
 
 function SettingsModal({ onClose }) {
 
-  // 현재 선택된 설정 탭 상태
   const [activeTab, setActiveTab] = useState("general");
-
-  // 회원탈퇴 경고창 상태
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  //회원탈퇴 함수 추가
   const handleDeleteAccount = async () => {
     try {
 
-    // JWT 토큰 가져오기
     const token = localStorage.getItem("token");
 
     // 회원탈퇴 API 요청 (DELETE /users/me 요청)
     await axios.delete("http://localhost:8000/users/me",
-      {headers: { Authorization: `Bearer ${token}`}}); // Authorization = JWT 로그인 토큰 전달
+      {headers: { Authorization: `Bearer ${token}`}}); 
 
-    // JWT 삭제
+
     removeToken();
-
-    // 이메일 삭제
     localStorage.removeItem("email");
-
-    // 메인 페이지 이동
     window.location.href = "/";
 
   } catch (err) {

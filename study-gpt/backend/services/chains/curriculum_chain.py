@@ -4,7 +4,6 @@
 
 
 from langchain_core.prompts import ChatPromptTemplate
-# ChatPromptTemplate= 랭체인 prompt 템플릿 생성기 , {category} 같은 변수를 Prompt 안에서 사용 가능하게 해줌.
 from services.shared_llm import llm
 
 # 1. 커리큘럼 프롬프트

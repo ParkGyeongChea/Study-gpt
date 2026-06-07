@@ -9,10 +9,7 @@ from services.chains.learning_intent_chain import analyze_learning_intent
 
 def learning_intent_node(state):
 
-    # 사용자 메시지 가져오기
     message = state["message"]
-
-    # 현재 학습 step 가져오기
     current_step = state["current_step"]
 
     # GPT 기반 학습 의도 분석

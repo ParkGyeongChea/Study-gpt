@@ -5,32 +5,19 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-//회원 가입 후 자동 로그인
 import { signup, login } from "../api/auth";
-
 import { saveToken } from "../utils/auth";
 
 function SignupPage() {
 
-  // 이메일 상태
   const [email, setEmail] = useState("");
-
-  // 비밀번호 상태
   const [password, setPassword] = useState("");
-
-  // 비밀번호 확인 입력값 상태 / setConfirmPassword = 비밀번호 재확인 입력값 저장
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  // 회원가입 성공 메시지 상태 / setSuccessMessage = 회원가입 성공 메시지 저장
   const [successMessage, setSuccessMessage] = useState("");
-
-  // 에러 메시지 상태
   const [error, setError] = useState("");
-
-  // 페이지 이동 함수
   const navigate = useNavigate();
-    // ESC 키로 회원가입 창 닫기
+    
+  
     useEffect(() => {
 
       const handleEsc = (e) => {
@@ -73,23 +60,14 @@ function SignupPage() {
       // 회원가입 API 요청 ,입력값 전달
       // FastAPI / singup 요청 -> 회원가입 처리
       await signup(email, password);
-
-      // 기존 에러 메시지 초기화
       setError("");
-
-      // 회원가입 성공 메시지
       setSuccessMessage("Study GPT 가입을 환영합니다!");
-
-
-      // 자동 로그인 진행
       const loginResult = await login(email, password);
 
-      // JWT 저장
       saveToken(loginResult.access_token);
 
       // 이메일 저장
       localStorage.setItem("email", loginResult.email);
-
 
       // 홈 이동
       setTimeout(() => {
@@ -102,7 +80,7 @@ function SignupPage() {
       // 이메일 중복 가입 에러
       if (
         err.response &&
-        err.response.status === 400 //백엔드에서 잘못된 요청 에러 반환 ,회원가입 중복 이메일이 여기 코드에서 걸림.
+        err.response.status === 400 
       ) {
         setError("이미 가입된 이메일입니다.");
       } else {

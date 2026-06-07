@@ -8,9 +8,7 @@ from dotenv import load_dotenv
 import json
 
 
-# .env 파일 환경변수 로드
 load_dotenv()
-
 
 #gpt객체
 llm = ChatOpenAI(
@@ -25,8 +23,6 @@ def generate_quiz(category: str, topic: str, step: dict, level: str):
     
     step_title = step.get("title")
     
-    
-
     #chain 연결
     try:
         response = quiz_chain.invoke({
@@ -37,14 +33,7 @@ def generate_quiz(category: str, topic: str, step: dict, level: str):
         })
 
         quiz_content = response.content.strip()
-        # llm.invoke(prompt)로 받아온 GPT 응답 객체(response) 안에서,
-        # 실제 텍스트(content)만 꺼내고,
-        # strip()으로 앞뒤 공백 제거
-        
-        # GPT JSON 문자열 → Python dict 변환
         quiz_data = json.loads(quiz_content)
-
-        # 사용자에게 보여줄 퀴즈 데이터
         quiz_for_user = []
         
         for quiz in quiz_data["quiz"]:

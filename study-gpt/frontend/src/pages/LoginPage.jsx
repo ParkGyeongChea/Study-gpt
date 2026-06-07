@@ -1,35 +1,22 @@
 //LoginPage.jsx
 //로그인 페이지 담당
 
-//useEffect는 ESC 키를 감지하려고 필요.
+
 import { useEffect, useState } from "react";
-
-//useNavigate = 페이지 이동 기능 
 import { useNavigate } from "react-router-dom";
-
 import { login } from "../api/auth";
-
-//JWT 저장+삭제 둘 다 사용
 import { saveToken, removeToken } from "../utils/auth";
 
 // 1. loginpage 화면 컴포넌트 시작
 
 function LoginPage() { 
-    //React는 화면 자체를 함수로 만든다.
-
-  //이메일 입력값 상태 만들기, 초기값은 빈 문자열 "" 사용자가 입력한 이메일 기억하는 변수
+    
   const [email, setEmail] = useState("");
-
-  // 비밀번호 상태
   const [password, setPassword] = useState("");
-
-  // 에러 메시지 상태 , 로그인 실패 메시지 저장
   const [error, setError] = useState("");
-
-  // 페이지 이동 함수
   const navigate = useNavigate();
 
-  // 로그인 창 닫기 함수
+  
   const closeLoginPage = () => {
     navigate("/");
   };
@@ -67,11 +54,7 @@ function LoginPage() {
       // 로그인 API 요청
       const result = await login(email, password);
 
-     
-
-      
-      
-
+    
       // access_token 저장
       saveToken(result.access_token);
 

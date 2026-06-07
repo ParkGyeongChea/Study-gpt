@@ -3,19 +3,11 @@
 // 왼쪽 채팅방 목록 전용 파일
 
 
-// React 기본 기능 import
+
 import { useEffect, useRef, useState } from "react";
-
-// backend API 요청 객체 import
 import api from "../api/api";
-
-//토큰 저장/조회 담당파일 import
 import { getToken, removeToken } from "../utils/auth";
-
-//설정 창 컴포넌트 불러오기
 import SettingsModal from "./SettingsModal";
-
-//페이지 이동 기능 useNavigate 를 이용해 roomlist에서도 login,signup 페이지로 이동할 수 있게 준비
 import { useNavigate } from "react-router-dom";
 
 
@@ -29,29 +21,15 @@ export default function RoomList({
   roomRefreshTrigger
 
 }) {
-  //페이지 이동 버튼을 사용할 수 있게 navigete 함수를 만듬
+  
   const navigate = useNavigate();
-
   const [showSidebarContent, setShowSidebarContent] = useState(isSidebarOpen);
-
-  //현재 우클릭 메뉴 상태 저장
   const [contextMenu, setContextMenu] = useState(null);
-
-  //삭제 확인창 열려있는 room_id (삭제 버튼 클릭시 확인창 표시)
   const [deleteRoomId, setDeleteRoomId] = useState(null);
-  //프로필 메뉴 state추가
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-
-  //설정 하위 메뉴 열림 여부 저장
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-  //설정 창 열림/ 닫힘 상태 저장
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-
-  //프로필 메뉴 화면 아무군데나 클릭 시 닫힐 수 있게 함
   const profileMenuRef = useRef(null);
-
-  //우클릭 메뉴 DOM 기억하는 ref
   const contextMenuRef = useRef(null);
   
 
@@ -82,12 +60,12 @@ export default function RoomList({
       profileMenuRef.current &&
       !profileMenuRef.current.contains(e.target)
     ) {
-      setIsProfileMenuOpen(false); //프로필 메뉴 닫기
+      setIsProfileMenuOpen(false); 
     }
 
     if (
     contextMenuRef.current &&
-    !contextMenuRef.current.contains(e.target) //클릭한 위치가 우클릭 메뉴 내부인지 검사
+    !contextMenuRef.current.contains(e.target) 
   ) {
     setContextMenu(null);
   }
@@ -110,50 +88,25 @@ export default function RoomList({
     setMessages([]);
   };
 
-    // 현재 로그인 토큰 조회,가져오기
   const token = getToken();
-
-  // 현재 로그인 이메일 조회,가져오기
   const email = localStorage.getItem("email");
-
-  // 실제 로그인 여부 판단 (토큰,이메일 전부 존재해야 로그인)
   const isLoggedIn = token && email;
 
   // 로그아웃 함수
   const handleLogout = () => {
-
-    // JWT 삭제
     removeToken();
-
-    // 이메일 삭제
     localStorage.removeItem("email");
-
-    // React 상태 강제 갱신
     window.location.reload();
 
   };
 
-  // 채팅방 목록 저장 state
+
   const [rooms, setRooms] = useState([]);
-
-  // 현재 이름 수정중인 room id
   const [editingRoomId, setEditingRoomId] = useState(null);
-  //editingRoomId = 현재 어떤 채팅방을 수정중인지 기억
-  //setEditingRoomId = 사용자가 입력중인 새 제목
-
-  // 수정 input 값 저장
   const [editTitle, setEditTitle] = useState("");
-
-  // 학습 아카이브 펼침 상태
   const [showArchive, setShowArchive] = useState(true);
-
-  // room 펼침/접힘 상태 저장
   const [expandedRooms, setExpandedRooms] = useState({});
-
-  // 현재 드래그중인 room 저장
   const [draggedRoomId, setDraggedRoomId] = useState(null);
-
-  // 현재 hover 중인 room 저장
   const [hoveredRoomId, setHoveredRoomId] = useState(null);
 
   // 현재 진행중인 학습 room만 분리
@@ -178,20 +131,19 @@ export default function RoomList({
   // 특정 room의 모든 하위 자식 검사 함수
   const isChildRoom = (parentId, targetId) => {
 
-    // 현재 parent의 자식들 찾기
     const children = rooms.filter(
       (room) => room.parent_room_id === parentId
     );
 
-    // 자식 room 반복 검사
+
     for (const child of children) {
 
-      // 현재 자식이 target이면 true
+   
       if (child.id === targetId) {
         return true;
       }
 
-      // 자식의 자식 재귀 검사
+
       if (isChildRoom(child.id, targetId)) {
         return true;
       }
@@ -206,7 +158,6 @@ export default function RoomList({
   const toggleRoomExpand = (roomId) => {
 
     setExpandedRooms((prev) => ({
-
       ...prev,
 
       [roomId]: !prev[roomId]
@@ -224,31 +175,27 @@ export default function RoomList({
 
         {/* 현재 room */}
         <div
-          draggable // 이 요소 드래그 가능
-          onDragStart={() => { //드래그 시작 순간 실행
-            setDraggedRoomId(room.id); //드래그 중인 room id 기억
+          draggable 
+          onDragStart={() => { 
+            setDraggedRoomId(room.id); 
           }}
 
           onDragEnd={() => {
             setHoveredRoomId(null);
             setDraggedRoomId(null);
           }}
-          //마우스가 어떤 room 위에 올라갔는지 기억
+          
           onDragOver={(e) => {
             e.preventDefault();
-
-            // 현재 hover 중인 room 저장
             setHoveredRoomId(room.id);
 
           }}
           onDrop={async () => {
 
-            // 자기 자신에게 drop 방지
             if (draggedRoomId === room.id) {
               return;
             }
 
-            // 자기 자신의 자식 아래 drop 방지
             if (isChildRoom(draggedRoomId, room.id)) {
               return;
             }
@@ -257,15 +204,12 @@ export default function RoomList({
               await api.put(
                 `/rooms/${draggedRoomId}/parent`,
                 {
-                  parent_room_id: room.id //드래그한 room을 현재 room 아래 소속시킴
+                  parent_room_id: room.id 
                 }
               );
-              // room 목록 새로고침
+              
               fetchRooms();
-              // hover 상태 초기화
               setHoveredRoomId(null);
-
-              // drag 상태 초기화
               setDraggedRoomId(null);
 
             } catch (error) {
@@ -338,7 +282,7 @@ export default function RoomList({
               {getChildRooms(room.id).length > 0 && (
                 <button
                   onClick={(e) => {
-                    e.stopPropagation(); //버튼 클릭 이벤트만 실행
+                    e.stopPropagation(); 
                     toggleRoomExpand(room.id);
                   }}
                   className="
@@ -386,17 +330,17 @@ export default function RoomList({
     );
   };
 
-  // 학습 아카이브 room만 분리
+
   const archivedRooms = rooms.filter(
     (room) => room.is_archived === true
   );
 
-  // 아카이브 최상위 room만 추출
+
   const archivedRootRooms = archivedRooms.filter(
     (room) => room.parent_room_id === null
   );
 
-  // 특정 아카이브 room의 자식 room 찾기
+
   const getArchivedChildRooms = (parentId) => {
 
     return archivedRooms.filter(
@@ -404,7 +348,7 @@ export default function RoomList({
     );
 
   };
-  // 아카이브 room 재귀 렌더링 함수
+
   const renderArchivedRoom = (room, depth = 0) => {
     return (
       <div key={room.id}>
@@ -552,7 +496,6 @@ export default function RoomList({
   // 화면 시작 시 자동 실행
   useEffect(() => {
     const token = getToken();
-    //토큰 없으면 rooms 요청 안함
     if (!token) return;
     fetchRooms();
   }, [roomRefreshTrigger]);
@@ -564,9 +507,8 @@ export default function RoomList({
   };
   return (
 
-    // =========================
+
     // 전체 사이드바 영역
-    // =========================
     <div className="flex flex-col h-full">
 
 
@@ -726,7 +668,7 @@ export default function RoomList({
             onDragOver={(e) => {
               e.preventDefault();
             }}
-            //onDrop 으로 아카이브 영역 자체가 Drop zone 으로 변경됨
+            
             onDrop={async () => {
 
               // 드래그 room 없으면 종료
@@ -810,7 +752,7 @@ export default function RoomList({
         )
       ) : (
 
-        // 사이드바 닫혔을 때 공간 유지
+        
         <div className="flex-1" />
       
 
@@ -916,8 +858,8 @@ export default function RoomList({
               {/* 설정 */}
               <button
                 onClick={() => {
-                  setIsProfileMenuOpen(false); //프로필 dropdown 닫기
-                  setIsSettingsModalOpen(true); //설정창 열기
+                  setIsProfileMenuOpen(false); 
+                  setIsSettingsModalOpen(true); 
                 }} 
                 className="
                   w-full
@@ -1045,10 +987,8 @@ export default function RoomList({
     {/* 우클릭 메뉴 ,우클릭 시에만 메뉴 표시*/}
     {contextMenu && (
       <div
-        //이 div 기억하라는 뜻, 리액트가 현재 우클릭 메뉴 DOM 기억할수 있게
+        
         ref={contextMenuRef}
-
-        //우클릭한 마우스 위치에 메뉴 띄움
         style={{
           top: contextMenu.y,
           left: contextMenu.x

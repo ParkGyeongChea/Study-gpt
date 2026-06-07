@@ -2,7 +2,6 @@
 
 #사용자가 오타, 잘못된 입력일시 오류 메시지 출력 파일
 
-
 def unknown_intent_node(state):
 
     return {

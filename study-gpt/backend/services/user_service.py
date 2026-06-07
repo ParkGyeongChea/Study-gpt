@@ -10,9 +10,8 @@ from core.security import (
     verify_password
 )
 
-# ==========================================
+
 # 회원가입 함수
-# ==========================================
 
 def create_user(
     db: Session,
@@ -29,10 +28,8 @@ def create_user(
     if existing_user:
         return None
 
-
     # 비밀번호 암호화
     hashed_password = hash_password(password)
-
 
     # User 객체 생성
     user = User(
@@ -40,21 +37,14 @@ def create_user(
         password=hashed_password
     )
 
-    # DB 저장 예약
     db.add(user)
-
-    # 실제 DB 반영
     db.commit()
-
-    # 저장된 최신 데이터 다시 조회
     db.refresh(user)
 
     return user
 
 
-# ==========================================
 # 로그인 인증 함수
-# ==========================================
 
 def authenticate_user(
     db: Session,
@@ -80,14 +70,11 @@ def authenticate_user(
     ):
         return None
 
-
-    # 로그인 성공
     return user
 
 
-# ==========================================
+
 # id 기준 사용자 조회 함수
-# ==========================================
 
 def get_user_by_id(
     db: Session,
@@ -99,9 +86,8 @@ def get_user_by_id(
     ).first()
 
 
-# ==========================================
+
 # 회원탈퇴 함수
-# ==========================================
 
 def delete_user(
     db: Session,
@@ -113,16 +99,10 @@ def delete_user(
         User.id == user_id
     ).first()
 
-
-    # 사용자가 없으면 실패
     if not user:
         return False
 
-
-    # 사용자 삭제
     db.delete(user)
-
-    # 실제 DB 반영
     db.commit()
 
     return True

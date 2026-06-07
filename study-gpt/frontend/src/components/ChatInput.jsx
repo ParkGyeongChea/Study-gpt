@@ -1,12 +1,9 @@
 //ChatInput.jsx
 // 입력창 + 메시지 전송 담당 컴포넌트
 
-//=====================================
 
-// React 상태(state) 기능 import
+
 import { useState } from "react";
-
-// backend API 요청 객체 import
 import api from "../api/api";
 
 
@@ -14,32 +11,15 @@ import api from "../api/api";
 export default function ChatInput({
 
   selectedRoom,
-  // 현재 선택된 채팅방 객체
-
   setSelectedRoom,
-  // 현재 선택 room 변경 함수
-
   setRoomRefreshTrigger,
-  //현재 선택 room 초기화 함수
-
   setRefreshTrigger,
-  // ChatMessages 다시 조회시키는 상태 변경 함수
-
   messages,
-  // 현재 채팅 메시지 배열 state
-
   setMessages,
-  // messages state 변경 함수
-
   isLoading,
-  // 현재 AI 응답 생성 중인지 여부
-
   setIsLoading,
-  // AI 로딩 상태 변경 함수
-
   studyMode,
   setStudyMode
-  //학습 모드 저장
 
 }) {
 
@@ -49,14 +29,9 @@ export default function ChatInput({
   // 업로드 파일 state
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
-  // 현재 선택된 학습 모드 저장 state
-  //const [selectedMode, setSelectedMode] = useState("free");
-
-
-  //=====================================
+  
   // 파일 업로드 처리
-  //=====================================
-
+  
   // 파일 drag & drop 처리
   const handleDrop = (e) => {
 
@@ -89,22 +64,15 @@ export default function ChatInput({
     );
   };
 
-  //=====================================
+  
   // 메시지 전송 함수
-  //=====================================
 
   const handleSend = async () => {
     
-   
-
     // 공백 입력 방지
     if (!message.trim()) return;
 
-
-    //=====================================
     // user 메시지 즉시 화면 출력
-    //=====================================
-
     const tempMessage = {
       id: Date.now(),
       role: "user",
@@ -117,70 +85,48 @@ export default function ChatInput({
       }))
     };
 
-    // 입력창 즉시 초기화
+    
     setMessage("");
-
-    
-    
-    // 기존 메시지 배열 뒤에 추가
     setMessages((prev) => [...prev, tempMessage]);
-
-
-    // 현재 room 임시 저장
     let currentRoom = selectedRoom;
-
-    // 현재 로그인 토큰 확인
     const token = localStorage.getItem("token");
 
 
-    //=====================================
     // room 없는 경우, 로그인 상태일 떄만 생성
-    //=====================================
-
     if (!currentRoom && token) {
       const roomResponse = await api.post("/rooms", {
         title: "새 채팅"
       });
 
       currentRoom = roomResponse.data;
-
       setSelectedRoom(currentRoom);
-
-      //새 채팅방 생성시 다시 조회
       setRoomRefreshTrigger((prev) => prev + 1);
-
-      // room 생성 직후 messages 유지 강제
       setMessages((prev) => [...prev]);
-
     }
 
 
-    //=====================================
+    
     // AI 로딩 시작
-    //=====================================
-
+    
     setIsLoading(true);
 
-    // 사용자 메시지 전송 즉시 room 목록 새로고침
     if (currentRoom?.id) {
       setRoomRefreshTrigger((prev) => prev + 1);
     }
 
 
-    // 임시 AI 로딩 메시지
     const loadingMessage = {
       id: "loading",
       role: "assistant",
       content: "답변 생성 중..."
     };
-    // 화면에 즉시 출력
+    
 
     setMessages((prev) => [...prev,loadingMessage]);
 
-    //=====================================
-    // FormData 생성
-    //=====================================
 
+    // FormData 생성
+   
     const formData = new FormData();
 
     formData.append(
@@ -234,13 +180,10 @@ export default function ChatInput({
 
       console.log("응답 타입:", responseType);
 
-      // agent_service에서 채팅방 제목이 자동 변경되었을 수 있으므로 RoomList를 다시 조회시킴
       setRoomRefreshTrigger((prev) => prev + 1);
-
-      // assistant 메시지 배열 생성
+      
       const newMessages = [];
 
-      // 강의 + 퀴즈를 하나의 assistant message로 합치기
       let assistantContent = "";
 
       // 강의 내용 추가
@@ -303,13 +246,11 @@ export default function ChatInput({
 
       // assistant 메시지 추가
       setMessages((prev) => {
-
-        // loading 메시지만 제거
         const filteredMessages = prev.filter(
           (msg) => msg.id !== "loading"
         );
 
-        // 기존 메시지 유지 + 배열 안 메시지들을 전부 추가
+        
         return [...filteredMessages, ...newMessages];
 
       });
@@ -337,10 +278,9 @@ export default function ChatInput({
   };
 
 
-  //=====================================
-  // 화면 출력(UI)
-  //=====================================
 
+  // 화면 출력(UI)
+ 
   return (
 
     <div className="mt-6" onDrop={handleDrop} onDragOver={handleDragOver}>
@@ -425,28 +365,20 @@ export default function ChatInput({
         )}
 
         {/* 실제 메시지 입력창 */}
-        <textarea //여러 줄 입력 기능
+        <textarea 
           value={message}
-          //메시지 창 크기 메시지에 따라 위로 크기 증가, 및 스크롤 추가
           onChange={(e) => {
             setMessage(e.target.value); 
-            
-            // 높이 초기화
             e.target.style.height = "auto";
-
-            // 최대 높이 제한
             e.target.style.height =
               Math.min(e.target.scrollHeight, 220) + "px";
           }}
           placeholder="무엇을 배우고 싶나요?"
 
-          // Enter 전송 / Shift+Enter 줄바꿈 
           onKeyDown={async (e) => {
 
             if (e.key === "Enter" && !e.shiftKey) {
-
               e.preventDefault();
-
               await handleSend();
             }
           }}
@@ -477,10 +409,9 @@ export default function ChatInput({
 
           {/* 학습 모드 선택 dropdown */}
           <select
-            //현재 dropdown 이 어떤 값을 보여줄지 결정하는 코드
+        
             value={studyMode}
-
-            //사용자가 dropdown 변경 시, studyMode state 변경하는 코드.
+            
             onChange={(e) => setStudyMode(e.target.value)}
 
             className="

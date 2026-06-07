@@ -5,12 +5,7 @@
 # ============================================================
 
 from sqlalchemy.orm import Session
-# SQLAlchemy DB 연결 객체 타입(Session) 불러오기
-
 from models.study_session import StudySession
-# models/study_session.py 파일(사용자 학습 상태 DB 테이블 역할)의
-# StudySession 모델 클래스 불러오기
-
 
 # ============================================================
 # 학습 상태 저장 함수
@@ -32,10 +27,8 @@ def save_study_session(
 
     # 현재 로그인 사용자의 기존 학습 기록 조회
     session = db.query(StudySession).filter(
-        #db.query() = () 테이블 조회 시작 
         StudySession.user_id == user_id,
         StudySession.room_id == room_id
-        #각 새로운 채팅방마다 새로운 session 시작
     ).first()
 
     # 기존 학습 기록이 있으면 UPDATE
@@ -70,18 +63,13 @@ def save_study_session(
 
         db.add(session)
 
-    # 실제 DB 저장 확정
     db.commit()
-
-    # 최신 DB 상태 다시 반영
     db.refresh(session)
-
     return session
 
 
-# ============================================================
+
 # 현재 학습 상태 조회 함수
-# ============================================================
 
 def get_study_session(
     db: Session,
@@ -98,9 +86,7 @@ def get_study_session(
     return session
 
 
-# ============================================================
 # 현재 학습 단계 index 수정 함수
-# ============================================================
 
 def update_step_index(
     db: Session,
@@ -115,19 +101,14 @@ def update_step_index(
     ).first()
 
     if session:
-
         session.current_step_index = new_index
-
         db.commit()
-
         db.refresh(session)
 
     return session
 
-
-# ============================================================
 # 현재 학습 step 객체 수정 함수
-# ============================================================
+
 
 def update_current_step(
     db: Session,
@@ -149,9 +130,7 @@ def update_current_step(
     return session
 
 
-# ============================================================
 # 학습 모드 수정 함수
-# ============================================================
 
 def update_study_mode(
     db: Session,
@@ -172,9 +151,8 @@ def update_study_mode(
 
     return session
 
-# ============================================================
+
 # 현재 학습 상태 수정 함수
-# ============================================================
 
 # 현재 사용자의 학습 상태를 DB에서 수정하는 역할
 def update_learning_status(db: Session, user_id: int, room_id: int, learning_status: str):
