@@ -5,6 +5,8 @@
 
 from langchain_community.document_loaders import PyPDFLoader
 
+from langchain_core.documents import Document
+
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 #랭체인에서 제공하는 문서 자동 chunk 분리기
 
@@ -24,6 +26,20 @@ def load_pdf(file_path: str):
 
     # PDF 문서 읽기, PDF 내용을 LangChain Document 객체 리스트로 변환.
     documents = loader.load()
+
+    return documents
+
+# TXT 문서 로딩 함수
+def load_txt(file_path: str):
+
+    # TXT 파일을 UTF-8 인코딩으로 읽음
+    with open(file_path, "r", encoding="utf-8") as file:
+        text = file.read()
+
+    # TXT 내용을 LangChain Document 객체 리스트로 변환
+    documents = [
+        Document(page_content=text)
+    ]
 
     return documents
 

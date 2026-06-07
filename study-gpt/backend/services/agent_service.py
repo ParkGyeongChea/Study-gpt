@@ -18,6 +18,7 @@ from services.quiz_service import generate_quiz
 from services.session_service import save_study_session
 from services.rag_service import (
     load_pdf,
+    load_txt,
     split_documents,
     create_vector_store,
     save_local_vector_store, #디스크 저장
@@ -86,12 +87,25 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None, fi
         for file_path in uploaded_file_paths:
 
             try:
+                # 파일 확장자 확인
+                file_extension = os.path.splitext(file_path)[1].lower()
+
                 # PDF 문서 로드
-                documents = load_pdf(file_path)
+                if file_extension == ".pdf":
+                    documents = load_pdf(file_path)
+
+                # TXT 문서 로드
+                elif file_extension == ".txt":
+                    documents = load_txt(file_path)
+
+                # 지원하지 않는 파일 형식
+                else:
+                    print(f"지원하지 않는 파일 형식입니다: {file_path}")
+                    continue
+
                 uploaded_documents.extend(documents)
                 print(f"문서 로드 완료: {file_path}")
-                
-                
+                      
                 # 업로드 문서 chunk 분리
                 vector_store = None
 
