@@ -229,8 +229,26 @@ $RECYCLE.BIN/
 
 backend/data/subtitles/
 
-.DS_Store
+# PDF Upload Files
+uploads/
 
+# FAISS Vector Stores
+vectorstores/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Environment
+.env
+
+# Virtual Environment
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
 
 # =========================
 # React / Node
