@@ -93,8 +93,8 @@ https://study-gpt-one.vercel.app/
 # 테스트용 계정
 테스트 시, 아래의 계정을 이용하시면 정상 이용이 가능합니다.
 
-email : test@naver.com
-passwodr : 1234
+- email : test@naver.com
+- password : 1234
 
 
 ### Backend
