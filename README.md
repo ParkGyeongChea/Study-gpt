@@ -19,17 +19,54 @@ RAG 기반 AI Tutor Agent 프로젝트입니다.
 
 ## 설치 및 실행
 
-python -m venv venv
+### Backend
 
-venv\Scripts\activate
+```bash
+python -m venv .venv
+
+.\.venv\Scripts\activate
 
 python -m pip install --upgrade pip
 
 pip install -r requirements.txt
 
+cd study-gpt/backend
+
 uvicorn main:app --reload
+```
+
+### Frontend
+
+```bash
+cd study-gpt/frontend
+
+npm install
 
 npm run dev
+```
+
+## 배포
+
+Frontend
+- Vercel
+
+Backend
+- Render
+
+Database
+- Supabase PostgreSQL
+
+AI
+- OpenAI API
+
+## 배포 주소
+
+Frontend
+- https://xxxxx.vercel.app
+
+Backend API
+- https://xxxxx.onrender.com/docs
+
 
 ## 시스템 아키텍처
 
