@@ -70,3 +70,40 @@ code {
 
   border-radius: 6px;
 }
+
+/* MVP 배포용: 라이트모드에서도 다크 UI 유지 */
+.bg-white {
+  background-color: #09090b !important;
+}
+
+.bg-gray-100 {
+  background-color: #27272a !important;
+}
+
+.bg-gray-200 {
+  background-color: #3f3f46 !important;
+}
+
+.bg-gray-300 {
+  background-color: #3f3f46 !important;
+}
+
+.text-black {
+  color: #ffffff !important;
+}
+
+.text-gray-600 {
+  color: #a1a1aa !important;
+}
+
+.text-gray-700 {
+  color: #d4d4d8 !important;
+}
+
+.border-gray-300 {
+  border-color: #27272a !important;
+}
+
+.placeholder\:text-gray-500::placeholder {
+  color: #a1a1aa !important;
+}
