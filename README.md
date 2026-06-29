@@ -154,79 +154,40 @@ https://study-gpt-backend.onrender.com/docs
 
 ## 시스템 아키텍처
 
-flowchart TD
-
-    User[사용자]
-
-    User --> Frontend[React + Vite Frontend<br/>Vercel]
-
-    %% ---------------- 인증 ----------------
-
-    Frontend -->|로그인 / 회원가입| Auth
-
-    subgraph AuthFlow["인증 흐름"]
-        direction TD
-
-        Auth[JWT 인증]
-        Auth --> Token[JWT 발급 및 검증]
-        Token --> DB[(Supabase PostgreSQL)]
-    end
-
-    %% ---------------- 메인 학습 ----------------
-
-    Frontend -->|메인 학습 채팅| Backend
-
-    subgraph Study["메인 학습 흐름"]
-        direction TD
-
-        Backend[FastAPI Backend]
-
-        Backend --> Agent[Study Agent]
-
-        Agent --> Graph[LangGraph<br/>학습 흐름 제어]
-
-        Graph --> Chain[LangChain<br/>Prompt Chain]
-
-        Chain --> OpenAI[OpenAI API]
-    end
-
-    Backend --> DB
-    Agent --> DB
-
-    %% ---------------- RAG ----------------
-
-    Frontend -->|PDF / TXT 업로드| Upload
-
-    subgraph RAG["문서 기반 RAG"]
-        direction TD
-
-        Upload[문서 업로드]
-
-        Upload --> Loader[문서 로드]
-
-        Loader --> Chunk[Chunk 분리]
-
-        Chunk --> Embedding[OpenAI Embedding]
-
-        Embedding --> Vector[(FAISS)]
-
-        Vector --> Search[Similarity Search]
-
-        Search --> Agent
-    end
-
-    %% ---------------- Side Chat ----------------
-
-    Frontend -->|Side Chat| Side
-
-    subgraph SideChat["Side Chat (독립 공간)"]
-        direction TD
-
-        Side[Side Chat Service]
-
-        Side --> SideGPT[OpenAI API]
-
-    end
+                              User
+                                │
+                                ▼
+              React + Vite Frontend (Vercel)
+                                │
+                                ▼
+                 FastAPI Backend (Render)
+                                │
+        ┌──────────────┬──────────────┬──────────────┐
+        │              │              │              │
+        ▼              ▼              ▼              ▼
+   Authentication   Study Agent   Side Chat      RAG Service
+      (JWT)            │         (Independent)       │
+        │              │              │              │
+        │              ▼              ▼              ▼
+        │         LangGraph       OpenAI API    PDF / TXT Upload
+        │              │                             │
+        │              ▼                             ▼
+        │         LangChain                  OpenAI Embedding
+        │              │                             │
+        │              ▼                             ▼
+        │         OpenAI API                FAISS Vector Store
+        │              ▲                             │
+        │              │                             ▼
+        └──────────────┼────────────────── Similarity Search
+                       │                             │
+                       └─────────────── Context ─────┘
+                                      │
+                                      ▼
+                                AI Response
+                                      │
+                                      ▼
+                     Supabase PostgreSQL Database
+                 (User / Room / Session / Message)
 
 
 # 핵심 기능
