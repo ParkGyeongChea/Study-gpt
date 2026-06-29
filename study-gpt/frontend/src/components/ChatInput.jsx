@@ -455,25 +455,55 @@ export default function ChatInput({
 
             {/* 새 학습 시작 전일 때만 학습 모드 표시 */}
             {!selectedRoom && (
-              <select
-                value={studyMode}
-                onChange={(e) => setStudyMode(e.target.value)}
-                className="
-                  bg-gray-100
-                  dark:bg-zinc-800
-                  text-black
-                  dark:text-white
-                  border border-gray-300
-                  dark:border-zinc-700
-                  rounded-full
-                  px-4 py-2
-                  text-sm
-                "
-              >
-                <option value="free">자유 학습</option>
-                <option value="light_quiz">가벼운 확인</option>
-                <option value="strict_quiz">집중 학습</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={studyMode}
+                  onChange={(e) => setStudyMode(e.target.value)}
+                  className="
+                    appearance-none
+                    bg-gray-100
+                    dark:bg-zinc-800
+                    text-black
+                    dark:text-white
+                    border border-gray-300
+                    dark:border-zinc-700
+                    rounded-full
+                    w-[153px]
+                    pl-5
+                    pr-10
+                    py-2
+                    text-sm
+                    outline-none
+                  "
+                >
+                  <option value="free">자유 학습</option>
+                  <option value="light_quiz">가벼운 확인</option>
+                  <option value="strict_quiz">집중 학습</option>
+                </select>
+
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="
+                    pointer-events-none
+                    absolute
+                    right-3
+                    top-1/2
+                    -translate-y-1/2
+                    w-4
+                    h-4
+                    text-gray-400
+                    dark:text-gray-300
+                  "
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
             )}
 
             {/* 전송 버튼 */}
