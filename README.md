@@ -154,6 +154,7 @@ https://study-gpt-backend.onrender.com/docs
 
 ## 시스템 아키텍처
 
+```text
                               User
                                 │
                                 ▼
@@ -188,6 +189,7 @@ https://study-gpt-backend.onrender.com/docs
                                       ▼
                      Supabase PostgreSQL Database
                  (User / Room / Session / Message)
+```
 
 
 # 핵심 기능
