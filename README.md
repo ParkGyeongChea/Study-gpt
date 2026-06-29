@@ -154,67 +154,79 @@ https://study-gpt-backend.onrender.com/docs
 
 ## 시스템 아키텍처
 
-```mermaid
 flowchart TD
 
     User[사용자]
-    Frontend[React + Vite Frontend<br/>Vercel]
-    Backend[FastAPI Backend<br/>Render]
-    DB[(Supabase PostgreSQL<br/>User / Room / Session / Message)]
-    OpenAI[OpenAI API]
 
-    User --> Frontend
-    Frontend --> Backend
+    User --> Frontend[React + Vite Frontend<br/>Vercel]
 
-    subgraph AuthFlow [인증 흐름]
-        Login[로그인 / 회원가입 요청]
-        JWT[JWT 발급 및 검증]
-        Login --> JWT
-        JWT --> DB
+    %% ---------------- 인증 ----------------
+
+    Frontend -->|로그인 / 회원가입| Auth
+
+    subgraph AuthFlow["인증 흐름"]
+        direction TD
+
+        Auth[JWT 인증]
+        Auth --> Token[JWT 발급 및 검증]
+        Token --> DB[(Supabase PostgreSQL)]
     end
 
-    subgraph MainFlow [메인 학습 흐름]
-        MainChat[메인 학습 채팅 요청]
-        Agent[Study Agent Service]
-        LangGraph[LangGraph<br/>학습 흐름 제어]
-        LangChain[LangChain<br/>Prompt Chain]
-        MainChat --> Agent
-        Agent --> LangGraph
-        LangGraph --> LangChain
-        LangChain --> OpenAI
-        Agent --> DB
+    %% ---------------- 메인 학습 ----------------
+
+    Frontend -->|메인 학습 채팅| Backend
+
+    subgraph Study["메인 학습 흐름"]
+        direction TD
+
+        Backend[FastAPI Backend]
+
+        Backend --> Agent[Study Agent]
+
+        Agent --> Graph[LangGraph<br/>학습 흐름 제어]
+
+        Graph --> Chain[LangChain<br/>Prompt Chain]
+
+        Chain --> OpenAI[OpenAI API]
     end
 
-    subgraph RAGFlow [문서 기반 RAG 흐름]
-        Upload[PDF / TXT 업로드]
-        RAG[RAG Service]
-        Split[문서 로드 및 Chunk 분리]
-        Embedding[OpenAI Embedding]
-        FAISS[(FAISS Vector Store)]
-        Retrieval[Similarity Search]
-        Upload --> RAG
-        RAG --> Split
-        Split --> Embedding
-        Embedding --> FAISS
-        FAISS --> Retrieval
-        Retrieval --> LangChain
+    Backend --> DB
+    Agent --> DB
+
+    %% ---------------- RAG ----------------
+
+    Frontend -->|PDF / TXT 업로드| Upload
+
+    subgraph RAG["문서 기반 RAG"]
+        direction TD
+
+        Upload[문서 업로드]
+
+        Upload --> Loader[문서 로드]
+
+        Loader --> Chunk[Chunk 분리]
+
+        Chunk --> Embedding[OpenAI Embedding]
+
+        Embedding --> Vector[(FAISS)]
+
+        Vector --> Search[Similarity Search]
+
+        Search --> Agent
     end
 
-    subgraph SideChatFlow [Side Chat 흐름]
-        SideChat[Side Chat 요청]
-        SideService[Side Chat Service]
-        SideChat --> SideService
-        SideService --> OpenAI
+    %% ---------------- Side Chat ----------------
+
+    Frontend -->|Side Chat| Side
+
+    subgraph SideChat["Side Chat (독립 공간)"]
+        direction TD
+
+        Side[Side Chat Service]
+
+        Side --> SideGPT[OpenAI API]
+
     end
-
-    Backend --> Login
-    Backend --> MainChat
-    Backend --> Upload
-    Backend --> SideChat
-
-    OpenAI --> Response[AI 응답]
-    Response --> Frontend
-```
 
 
 # 핵심 기능
