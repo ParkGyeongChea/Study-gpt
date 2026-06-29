@@ -24,6 +24,7 @@ def explain_node(state: GraphState):
         step=current_step,
         level=state["level"],
         message=state["message"],
+        study_mode=state.get("study_mode"),
         vector_store=state.get("vector_store")
     )
         

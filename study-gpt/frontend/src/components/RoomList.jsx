@@ -295,10 +295,42 @@ export default function RoomList({
                   {expandedRooms[room.id] ? "▼" : "▶"}
                 </button>
               )}
-            <span>
-              {depth > 0 && "└ "}
-              {room.title}
-            </span>
+            {editingRoomId === room.id ? (
+              <input
+                value={editTitle}
+                autoFocus
+                onChange={(e) => setEditTitle(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleUpdateRoomTitle(room.id);
+                  }
+
+                  if (e.key === "Escape") {
+                    setEditingRoomId(null);
+                    setEditTitle("");
+                  }
+                }}
+                onBlur={() => {
+                  handleUpdateRoomTitle(room.id);
+                }}
+                className="
+                  w-full
+                  bg-zinc-800
+                  text-white
+                  px-2 py-1
+                  rounded-md
+                  outline-none
+                  text-sm
+                "
+              />
+            ) : (
+              <span>
+                {depth > 0 && "└ "}
+                {room.title}
+              </span>
+            )}
           </div>
         </div>
         {/* 현재 hover 중인 room insertion line */}
@@ -460,10 +492,42 @@ export default function RoomList({
               </button>
             )}
 
-            <span>
-              {depth > 0 && "└ "}
-              {room.title}
-            </span>
+            {editingRoomId === room.id ? (
+              <input
+                value={editTitle}
+                autoFocus
+                onChange={(e) => setEditTitle(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleUpdateRoomTitle(room.id);
+                  }
+
+                  if (e.key === "Escape") {
+                    setEditingRoomId(null);
+                    setEditTitle("");
+                  }
+                }}
+                onBlur={() => {
+                  handleUpdateRoomTitle(room.id);
+                }}
+                className="
+                  w-full
+                  bg-zinc-800
+                  text-white
+                  px-2 py-1
+                  rounded-md
+                  outline-none
+                  text-sm
+                "
+              />
+            ) : (
+              <span>
+                {depth > 0 && "└ "}
+                {room.title}
+              </span>
+            )}
 
           </div>
         </div>
@@ -505,6 +569,39 @@ export default function RoomList({
     const response = await api.get("/rooms");
     setRooms(response.data);
   };
+
+  // 채팅방 이름 변경 저장 함수
+  const handleUpdateRoomTitle = async (roomId) => {
+    const trimmedTitle = editTitle.trim();
+
+    if (!trimmedTitle) {
+      setEditingRoomId(null);
+      setEditTitle("");
+      return;
+    }
+
+    try {
+      await api.put(`/rooms/${roomId}`, {
+        title: trimmedTitle
+      });
+
+      await fetchRooms();
+
+      if (selectedRoom?.id === roomId) {
+        setSelectedRoom((prev) => ({
+          ...prev,
+          title: trimmedTitle
+        }));
+      }
+
+      setEditingRoomId(null);
+      setEditTitle("");
+
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  
   return (
 
 

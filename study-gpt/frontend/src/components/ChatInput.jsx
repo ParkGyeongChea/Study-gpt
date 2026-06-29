@@ -3,7 +3,7 @@
 
 
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import api from "../api/api";
 
 
@@ -29,7 +29,9 @@ export default function ChatInput({
   // 업로드 파일 state
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
-  
+  // 숨겨진 파일 input 접근용 ref
+  const fileInputRef = useRef(null);
+
   // 파일 업로드 처리
   
   // 파일 drag & drop 처리
@@ -62,6 +64,19 @@ export default function ChatInput({
         index !== indexToRemove
       )
     );
+  };
+
+  // + 버튼으로 파일 선택 처리
+  const handleFileSelect = (e) => {
+
+    const files = Array.from(e.target.files);
+
+    setUploadedFiles((prev) => [
+      ...prev,
+      ...files
+    ]);
+
+    e.target.value = "";
   };
 
   
@@ -404,47 +419,105 @@ export default function ChatInput({
         />
 
 
-        {/* 아래 옵션 영역 */}
-        <div className="flex justify-end mt-4">
+        {/* 아래 버튼 영역 */}
+        <div className="flex justify-between items-center mt-4">
 
-          {/* 학습 모드 선택 dropdown */}
-          <select
-        
-            value={studyMode}
-            
-            onChange={(e) => setStudyMode(e.target.value)}
+          {/* 숨겨진 파일 선택 input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={handleFileSelect}
+            className="hidden"
+          />
 
+          {/* 첨부파일 버튼 */}
+          <button
+            type="button"
+            onClick={() => {
+              fileInputRef.current?.click();
+            }}
             className="
-              bg-gray-100
-              dark:bg-zinc-800
-
-              text-black
-              dark:text-white
-
-              border border-gray-300
-              dark:border-zinc-700
-
-              rounded-full
-              px-4 py-2
-              text-sm
+              w-10 h-10
+              bg-transparent
+              text-white
+              text-4xl
+              leading-none
+              flex items-center justify-center
+              hover:text-zinc-300
+              transition
             "
-
           >
+            +
+          </button>
 
-            <option value="free">
-              자유 학습
-            </option>
+          <div className="flex items-center gap-3">
 
-            <option value="light_quiz">
-              가벼운 확인
-            </option>
+            {/* 새 학습 시작 전일 때만 학습 모드 표시 */}
+            {!selectedRoom && (
+              <select
+                value={studyMode}
+                onChange={(e) => setStudyMode(e.target.value)}
+                className="
+                  bg-gray-100
+                  dark:bg-zinc-800
+                  text-black
+                  dark:text-white
+                  border border-gray-300
+                  dark:border-zinc-700
+                  rounded-full
+                  px-4 py-2
+                  text-sm
+                "
+              >
+                <option value="free">자유 학습</option>
+                <option value="light_quiz">가벼운 확인</option>
+                <option value="strict_quiz">집중 학습</option>
+              </select>
+            )}
 
-            <option value="strict_quiz">
-              집중 학습
-            </option>
+            {/* 전송 버튼 */}
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={isLoading || !message.trim()}
+              className="
+                w-11 h-11
+                rounded-full
+                bg-blue-500
+                text-white
+                flex items-center justify-center
+                text-2xl
+                font-bold
+                leading-none
+                hover:bg-blue-600
+                disabled:opacity-40
+                disabled:cursor-not-allowed
+                transition
+              "
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.3"
+                className="w-7 h-7"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 18V6"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8.5 9.5L12 6l3.5 3.5"
+                />
+</svg>
+            </button>
 
-          </select>
-
+          </div>
         </div>
 
       </div>

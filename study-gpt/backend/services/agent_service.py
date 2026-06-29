@@ -198,7 +198,7 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None, fi
             message
         )
     
-    # 강의 재요청 처리 현재 학습 단계 반복 학습 가능 함수
+    # 강의 재요청 처리, 현재 학습 단계 반복 학습 가능 함수
    
     if (
         (
@@ -248,6 +248,7 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None, fi
             "category": session.category,
             "topic": session.topic,
             "level": session.level,
+            "study_mode": session.study_mode,
             "curriculum": curriculum,
             "current_step": current_step,
             "response": {},
@@ -373,7 +374,8 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None, fi
                 topic=session.topic,
                 step=session.current_step,
                 level=session.level,
-                message=message
+                message=message,
+                study_mode=session.study_mode
             )
 
             # lecture가 dict 구조인 경우
@@ -546,6 +548,7 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None, fi
             "category": session.category,
             "topic": session.topic,
             "level": session.level,
+            "study_mode": session.study_mode,
             "curriculum": session.curriculum,
             "current_step": session.current_step,
             "response": {},
@@ -646,6 +649,7 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None, fi
             "category": session.category,
             "topic": session.topic,
             "level": session.level,
+            "study_mode": session.study_mode,
             "curriculum": session.curriculum,
             "current_step": session.current_step,
             "response": {},
@@ -729,6 +733,7 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None, fi
             "category": "",
             "topic": "",
             "level": "",
+            "study_mode": study_mode,
             "curriculum": [],
             "current_step": {},
             "response": {},
@@ -814,6 +819,7 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None, fi
             step=current_step,
             level="초급",
             message=message,
+            study_mode=study_mode,
             vector_store=vector_store
         )
 
@@ -898,6 +904,7 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None, fi
             "category": "",
             "topic": "",
             "level": "",
+            "study_mode": study_mode,
             "curriculum": [],
             "current_step": {},
             "response": {},
@@ -909,6 +916,17 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None, fi
         graph_result = study_graph_app.invoke(initial_state)
         
         print(graph_result)
+        
+        
+        print("===== STUDY MODE DEBUG =====")
+        print("study_mode from request:", study_mode)
+        print("study_mode in graph_result:", graph_result.get("study_mode"))
+        print("category:", graph_result.get("category"))
+        print("topic:", graph_result.get("topic"))
+        print("level:", graph_result.get("level"))
+        print("curriculum:", graph_result.get("curriculum"))
+        print("current_step:", graph_result.get("current_step"))
+        print("============================")
         
         # Graph 결과 데이터 꺼내기 , GraphState 안에 저장된 결과들을 실제 서비스에서 사용 가능하게 꺼내는 단계
         category = graph_result["category"]
@@ -1008,7 +1026,8 @@ def run(db, user_id: int, room_id: int, message: str, study_mode: str = None, fi
             category=session.category,
             topic=session.topic,
             step=session.current_step,
-            level=session.level
+            level=session.level,
+            study_mode=session.study_mode
         )
 
         # 퀴즈 생성 실패 예외 처리

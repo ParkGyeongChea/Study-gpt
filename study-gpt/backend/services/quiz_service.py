@@ -19,7 +19,13 @@ llm = ChatOpenAI(
 
 # 퀴즈 생성 함수
 # db에서 현재 로그인 사용자 기준 학습 상태를 가져옴
-def generate_quiz(category: str, topic: str, step: dict, level: str):
+def generate_quiz(
+    category: str,
+    topic: str,
+    step: dict,
+    level: str,
+    study_mode: str = None
+):
     
     step_title = step.get("title")
     
@@ -28,8 +34,10 @@ def generate_quiz(category: str, topic: str, step: dict, level: str):
         response = quiz_chain.invoke({
             "category": category,
             "topic": topic,
-            "step_title": step_title,
-            "level": level
+            "step_number": step["step"],
+            "step_title": step["title"],
+            "level": level,
+            "study_mode": study_mode
         })
 
         quiz_content = response.content.strip()

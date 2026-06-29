@@ -11,6 +11,7 @@ const api = axios.create({
 
     //1. 서버의 기본 주소 설정 (백엔드<->프론트 연결 핵심 코드)
     baseURL:"https://study-gpt-backend.onrender.com",
+    // baseURL:"http://127.0.0.1:8000",
 
     headers: { //headers 설정 (JSON 형식으로 데이터 보낸다고 서버에 알림)
         "Content-Type": "application/json",

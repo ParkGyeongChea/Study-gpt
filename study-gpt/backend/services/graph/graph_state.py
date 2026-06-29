@@ -16,6 +16,7 @@ class GraphState(TypedDict):
     category: str
     topic: str
     level: str
+    study_mode: str ##
     response: str
     curriculum: list 
     current_step: dict 

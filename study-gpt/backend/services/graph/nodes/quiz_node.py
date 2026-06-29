@@ -20,7 +20,8 @@ def quiz_node(state):
         category=category,
         topic=topic,
         step=current_step,
-        level=level
+        level=level,
+        study_mode=state.get("study_mode")
     )
 
     # GraphState response 업데이트

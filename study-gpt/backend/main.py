@@ -2,7 +2,10 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from dotenv import load_dotenv
+load_dotenv(override=True)
+
 from api import study_router  
 from api import agent_router
 from api import side_chat_router
@@ -36,17 +39,16 @@ app.include_router(study_router.router)
 app.include_router(user_router) 
 app.include_router(study_room_router.router)
 
-#환경변수 로드
-load_dotenv()
 
-#CROS 설정 (React 연결)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+# #CROS 설정 (React 연결)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 
 #로컬 서버 실행
