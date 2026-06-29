@@ -1,5 +1,5 @@
 
-# Study GPT (MVP v1)
+# Study GPT (MVP v1.1)
 
 Study GPT는 단순 질답형 챗봇이 아닌,
 
